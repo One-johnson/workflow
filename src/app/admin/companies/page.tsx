@@ -57,6 +57,8 @@ import { Badge } from '@/components/ui/badge';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import Image from 'next/image';
 
+
+
 type SortField = 'name' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
 
@@ -78,7 +80,7 @@ export default function CompaniesPage() {
     address: '',
     phone: '',
     email: '',
-    createdBy: user!.userId,
+    createdBy: user?.userId || '',
   });
 
   const companies = useQuery(api.companies.list);
@@ -130,7 +132,7 @@ export default function CompaniesPage() {
         address:'',
         phone:'',
         email:'',
-        createdBy: user!.userId,
+        createdBy: user?.userId || '',
         });
       setEditingCompany(null);
     } catch (error) {
@@ -147,7 +149,7 @@ export default function CompaniesPage() {
       address: company.address || '',
       phone: company.phone || '',
       email: company.email || '',
-      createdBy: company.createdBy || user!.userId,
+      createdBy: company.createdBy || user?.userId || '',
     });
     setIsDialogOpen(true);
   };
@@ -166,7 +168,7 @@ export default function CompaniesPage() {
 
   const handleAdd = () => {
     setEditingCompany(null);
-    setFormData({ name: '', description: '', logo: '', address: '', phone: '', email: '', createdBy: user!.userId });
+    setFormData({ name: '', description: '', logo: '', address: '', phone: '', email: '', createdBy: user?.userId || '' });
     setIsDialogOpen(true);
   };
 
