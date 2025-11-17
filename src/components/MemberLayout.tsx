@@ -6,10 +6,12 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Button } from './ui/button';
 import { EnhancedNotificationBell } from './EnhancedNotificationBell';
 import { UserProfileDropdown } from './UserProfileDropdowm';
+import { GlobalSearch } from './GlobalSearch';
 import {
   Building2,
   FileText,
   LayoutDashboard,
+
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -24,6 +26,7 @@ export function MemberLayout({ children }: MemberLayoutProps) {
   const navigation = [
     { name: 'Dashboard', href: '/member', icon: LayoutDashboard },
     { name: 'My Documents', href: '/member/documents', icon: FileText },
+   
   ];
 
   return (
@@ -55,8 +58,11 @@ export function MemberLayout({ children }: MemberLayoutProps) {
             })}
           </nav>
 
-          {/* Right side - Notifications and Profile */}
+          {/* Right side - Search, Notifications and Profile */}
           <div className="flex items-center gap-2 ml-auto">
+            <div className="hidden sm:block">
+              <GlobalSearch />
+            </div>
             <EnhancedNotificationBell />
             <UserProfileDropdown />
           </div>

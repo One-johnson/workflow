@@ -1,4 +1,3 @@
-import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -45,14 +44,14 @@ export const list = query({
     if (args.memberId) {
       return await ctx.db
         .query("documents")
-        .withIndex("by_member", (q) => q.eq("memberId", args.memberId! as Id<"members">))
+        .withIndex("by_member", (q) => q.eq("memberId", args.memberId!))
         .collect();
     }
 
     if (args.companyId) {
       return await ctx.db
         .query("documents")
-        .withIndex("by_company", (q) => q.eq("companyId", args.companyId! as Id<"companies">))
+        .withIndex("by_company", (q) => q.eq("companyId", args.companyId!))
         .collect();
     }
 
@@ -120,5 +119,49 @@ export const listAll = query({
 export const generateUploadUrl = mutation({
   handler: async (ctx) => {
     return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const getUrl = query({
+  args: { storageId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+export const listAllWithDetails = query({
+  handler: async (ctx) => {
+    const documents = await ctx.db.query("documents").collect();
+    
+    const docsWithDetails = await Promise.all(
+      documents.map(async (doc) => {
+        const member = await ctx.db.get(doc.memberId);
+        const uploader = await ctx.db.get(doc.uploadedBy);
+        const url = await ctx.storage.getUrl(doc.fileUrl);
+        
+        return {
+          ...doc,
+          fileUrl: url || doc.fileUrl,
+          memberName: member ? `${member.firstName} ${member.lastName}` : "Unknown",
+          uploaderName: uploader ? `${uploader.firstName} ${uploader.lastName}` : "Unknown",
+        };
+      })
+    );
+    
+    return docsWithDetails;
+  },
+});
+
+export const getWithUrl = query({
+  args: { id: v.id("documents") },
+  handler: async (ctx, args) => {
+    const doc = await ctx.db.get(args.id);
+    if (!doc) return null;
+    
+    const url = await ctx.storage.getUrl(doc.fileUrl);
+    return {
+      ...doc,
+      fileUrl: url || doc.fileUrl,
+    };
   },
 });

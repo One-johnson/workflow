@@ -16,6 +16,7 @@ export default defineSchema({
 
   companies: defineTable({
     name: v.string(),
+    companyIdNumber: v.string(),
     description: v.optional(v.string()),
     logo: v.optional(v.string()),
     address: v.optional(v.string()),
