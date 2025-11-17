@@ -1,54 +1,65 @@
-import { mutation, query, } from "./_generated/server";
+import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 import bcrypt from "bcryptjs";
 
-export const login = mutation({
+/**
+ * Helper function to manually create admin users
+ * This should be called from the Convex dashboard or CLI
+ */
+export const createAdmin = mutation({
   args: {
     email: v.string(),
     password: v.string(),
+    firstName: v.string(),
+    lastName: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
+    // Check if user already exists
+    const existingUser = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
 
-    if (!user) {
-      throw new Error("Invalid email or password");
+    if (existingUser) {
+      throw new Error("User with this email already exists");
     }
 
-    const isValid = bcrypt.compareSync(args.password, user.passwordHash);
+    // Hash the password
+    const passwordHash = bcrypt.hashSync(args.password, 10);
 
-    if (!isValid) {
-      throw new Error("Invalid email or password");
-    }
+    // Create admin user
+    const userId = await ctx.db.insert("users", {
+      email: args.email,
+      passwordHash,
+      role: "admin",
+      firstName: args.firstName,
+      lastName: args.lastName,
+      createdAt: Date.now(),
+    });
 
     return {
-      userId: user._id,
-      email: user.email,
-      role: user.role,
-      companyId: user.companyId,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      userId,
+      message: "Admin user created successfully",
     };
   },
 });
 
-export const getCurrentUser = query({
-  args: { userId: v.id("users") },
+/**
+ * Helper function to update a user's role
+ * Use this to promote a member to admin or demote an admin to member
+ */
+export const updateUserRole = mutation({
+  args: {
+    userId: v.id("users"),
+    role: v.union(v.literal("admin"), v.literal("member")),
+  },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) {
-      return null;
-    }
+    await ctx.db.patch(args.userId, {
+      role: args.role,
+    });
 
     return {
-      _id: user._id,
-      email: user.email,
-      role: user.role,
-      companyId: user.companyId,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      message: `User role updated to ${args.role}`,
     };
   },
 });

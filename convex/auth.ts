@@ -113,3 +113,11 @@ export const getCurrentUser = query({
     };
   },
 });
+
+export const getUsersByRole = query({
+  args: { role: v.union(v.literal("admin"), v.literal("member")) },
+  handler: async (ctx, args) => {
+    const users = await ctx.db.query("users").collect();
+    return users.filter((u) => u.role === args.role);
+  },
+});

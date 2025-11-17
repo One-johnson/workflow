@@ -2,6 +2,11 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
+function generateCompanyId(): string {
+  return Math.floor(10000000 + Math.random() * 90000000).toString();
+}
+
+
 export const create = mutation({
   args: {
     name: v.string(),
@@ -13,6 +18,8 @@ export const create = mutation({
     createdBy: v.id("users"),
   },
   handler: async (ctx, args) => {
+ const companyIdNumber = generateCompanyId();
+
     const companyId = await ctx.db.insert("companies", {
       name: args.name,
       description: args.description,
@@ -22,9 +29,10 @@ export const create = mutation({
       email: args.email,
       createdAt: Date.now(),
       createdBy: args.createdBy,
+      companyIdNumber: ""
     });
 
-    return companyId;
+  return { companyId, companyIdNumber };
   },
 });
 
@@ -103,3 +111,69 @@ export const getMembersWithDetails = query({
     return members;
   },
 });
+
+export const createBulk = mutation({
+  args: {
+    companies: v.array(
+      v.object({
+        name: v.string(),
+        description: v.optional(v.string()),
+      })
+    ),
+    createdBy: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const results: any[] | PromiseLike<any[]> = [];
+    for (const company of args.companies) {
+      const companyIdNumber = generateCompanyId();
+      const id = await ctx.db.insert("companies", {
+        name: company.name,
+        companyIdNumber,
+        description: company.description,
+        createdAt: Date.now(),
+        createdBy: args.createdBy,
+      });
+      results.push({ id, companyIdNumber });
+    }
+    return results;
+  },
+});
+
+export const removeBulk = mutation({
+  args: { ids: v.array(v.id("companies")) },
+  handler: async (ctx, args) => {
+    for (const id of args.ids) {
+      await ctx.db.delete(id);
+    }
+  },
+});
+
+export const globalSearch = query({
+  args: { searchTerm: v.string() },
+  handler: async (ctx, args) => {
+    const term = args.searchTerm.toLowerCase();
+    
+    const companies = await ctx.db.query("companies").collect();
+    const members = await ctx.db.query("members").collect();
+
+    const matchedCompanies = companies.filter(
+      (c) =>
+        c.name.toLowerCase().includes(term) ||
+        c.companyIdNumber.includes(term)
+    );
+
+    const matchedMembers = members.filter(
+      (m) =>
+        m.firstName.toLowerCase().includes(term) ||
+        m.lastName.toLowerCase().includes(term) ||
+        m.email.toLowerCase().includes(term) ||
+        m.memberIdNumber.includes(term)
+    );
+
+    return {
+      companies: matchedCompanies,
+      members: matchedMembers,
+    };
+  },
+});
+

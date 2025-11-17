@@ -6,11 +6,13 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Button } from './ui/button';
 import { EnhancedNotificationBell } from './EnhancedNotificationBell';
 import { UserProfileDropdown } from './UserProfileDropdowm';
+import { GlobalSearch } from './GlobalSearch';
 import {
   Building2,
   Users,
   FileText,
   LayoutDashboard,
+ 
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -27,6 +29,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: 'Companies', href: '/admin/companies', icon: Building2 },
     { name: 'Members', href: '/admin/members', icon: Users },
     { name: 'Documents', href: '/admin/documents', icon: FileText },
+  
   ];
 
   return (
@@ -60,6 +63,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Right side - Notifications and Profile */}
           <div className="flex items-center gap-2 ml-auto">
+              <GlobalSearch />
             <EnhancedNotificationBell />
             <UserProfileDropdown />
           </div>

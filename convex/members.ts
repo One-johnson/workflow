@@ -1,7 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import bcrypt from "bcryptjs";
-import { Id } from "./_generated/dataModel";
 
 // Generate random 8-digit password
 function generatePassword(): string {
@@ -34,7 +33,7 @@ export const create = mutation({
 
     // Generate 8-digit password
     const plainPassword = generatePassword();
-    const passwordHash =  bcrypt.hashSync(plainPassword, 10);
+    const passwordHash = await bcrypt.hash(plainPassword, 10);
 
     // Create user account
     const userId = await ctx.db.insert("users", {
@@ -62,7 +61,6 @@ export const create = mutation({
       department: args.department,
       dateJoined: Date.now(),
       status: "active",
-      createdBy: args.createdBy,
     });
 
     // Send notification to admin
@@ -87,7 +85,7 @@ export const list = query({
     if (args.companyId) {
       return await ctx.db
         .query("members")
-        .withIndex("by_company", (q) => q.eq("companyId", args.companyId! as Id<"companies">))
+        .withIndex("by_company", (q) => q.eq("companyId", args.companyId!))
         .collect();
     }
     return await ctx.db.query("members").collect();
@@ -188,5 +186,114 @@ export const getByStatus = query({
   handler: async (ctx, args) => {
     const members = await ctx.db.query("members").collect();
     return members.filter((m) => m.status === args.status);
+  },
+});
+
+export const createBulk = mutation({
+  args: {
+    members: v.array(
+      v.object({
+        companyId: v.id("companies"),
+        firstName: v.string(),
+        lastName: v.string(),
+        email: v.string(),
+        phone: v.optional(v.string()),
+        position: v.optional(v.string()),
+        department: v.optional(v.string()),
+      })
+    ),
+    createdBy: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const results = [];
+    for (const member of args.members) {
+      // Check if email already exists
+      const existingUser = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", member.email))
+        .first();
+
+      if (existingUser) {
+        results.push({ email: member.email, error: "Email already registered" });
+        continue;
+      }
+
+      // Generate password
+      const plainPassword = generatePassword();
+      const passwordHash = await bcrypt.hash(plainPassword, 10);
+
+      // Create user account
+      const userId = await ctx.db.insert("users", {
+        email: member.email,
+        passwordHash,
+        role: "member",
+        firstName: member.firstName,
+        lastName: member.lastName,
+        companyId: member.companyId,
+        createdAt: 0
+      });
+
+      // Create member profile
+      const memberId = await ctx.db.insert("members", {
+        userId,
+        companyId: member.companyId,
+        memberIdNumber: plainPassword,
+        firstName: member.firstName,
+        lastName: member.lastName,
+        email: member.email,
+        phone: member.phone,
+        position: member.position,
+        department: member.department,
+        dateJoined: Date.now(),
+        status: "active",
+      });
+
+      results.push({
+        memberId,
+        email: member.email,
+        password: plainPassword,
+        success: true,
+      });
+    }
+    return results;
+  },
+});
+
+export const removeBulk = mutation({
+  args: { ids: v.array(v.id("members")) },
+  handler: async (ctx, args) => {
+    for (const id of args.ids) {
+      const member = await ctx.db.get(id);
+      if (member) {
+        // Delete associated documents
+        const documents = await ctx.db
+          .query("documents")
+          .withIndex("by_member", (q) => q.eq("memberId", id))
+          .collect();
+        for (const doc of documents) {
+          await ctx.db.delete(doc._id);
+        }
+        // Delete member
+        await ctx.db.delete(id);
+      }
+    }
+  },
+});
+
+export const updateBulk = mutation({
+  args: {
+    updates: v.array(
+      v.object({
+        id: v.id("members"),
+        status: v.optional(v.union(v.literal("active"), v.literal("dormant"))),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    for (const update of args.updates) {
+      if (update.status) {
+        await ctx.db.patch(update.id, { status: update.status });
+      }
+    }
   },
 });
