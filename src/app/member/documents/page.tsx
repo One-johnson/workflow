@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useQuery } from 'convex/react';
-import { api } from '../../../../convex/_generated/api';
-import { useAuth } from '../../../context/AuthContext';
-import { MemberLayout } from '../../../components/MemberLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import { useAuth } from "../../../context/AuthContext";
+import { MemberLayout } from "@/components/MemberLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -15,34 +15,36 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../../../components/ui/table';
-import { FileText, Download } from 'lucide-react';
-import { TableSkeleton } from '../../../components/skeletons/TableSkeleton';
+} from "@/components/ui/table";
+import { FileText, Download } from "lucide-react";
+import { TableSkeleton } from "@/components/skeletons/TableSkeleton";
 
 export default function MemberDocumentsPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
-  const members = useQuery(api.members.list, user ? { companyId: user.companyId } : 'skip');
+  const members = useQuery(api.members.list);
   const documents = useQuery(api.documents.listAll);
 
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'member')) {
-      router.push('/');
+    if (!isLoading && (!user || user.role !== "member")) {
+      router.push("/");
     }
   }, [user, isLoading, router]);
 
   if (isLoading || !user) return null;
 
   const currentMember = members?.find((m) => m.userId === user.userId);
-  const myDocuments = documents?.filter((d) => d.memberId === currentMember?._id);
+  const myDocuments = documents?.filter(
+    (d) => d.memberId === currentMember?._id
+  );
 
   const loading = !members || !documents || !currentMember;
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
   };
 
   return (
@@ -69,8 +71,12 @@ export default function MemberDocumentsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Title</TableHead>
-                        <TableHead className="hidden sm:table-cell">Type</TableHead>
-                        <TableHead className="hidden md:table-cell">Size</TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          Type
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Size
+                        </TableHead>
                         <TableHead className="hidden sm:table-cell">
                           Uploaded
                         </TableHead>
@@ -95,7 +101,8 @@ export default function MemberDocumentsPage() {
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
                             <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                              {doc.fileType.split('/')[1]?.toUpperCase() || 'FILE'}
+                              {doc.fileType.split("/")[1]?.toUpperCase() ||
+                                "FILE"}
                             </span>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
@@ -108,7 +115,7 @@ export default function MemberDocumentsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => window.open(doc.fileUrl, '_blank')}
+                              onClick={() => window.open(doc.fileUrl, "_blank")}
                             >
                               <Download className="h-4 w-4" />
                             </Button>

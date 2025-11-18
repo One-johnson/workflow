@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from 'next-themes';
-import { Button } from './ui/button';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
+import { useTheme } from "next-themes";
+import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+} from "./ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,10 +22,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './ui/alert-dialog';
-import { Avatar, AvatarFallback } from './ui/avatar';
-import { LogOut, Moon, Sun, User } from 'lucide-react';
-import { Badge } from './ui/badge';
+} from "./ui/alert-dialog";
+import { Avatar, AvatarFallback } from "./ui/avatar";
+import { LogOut, Moon, Sun, User } from "lucide-react";
+import { Badge } from "./ui/badge";
 
 export function UserProfileDropdown() {
   const { user, logout } = useAuth();
@@ -37,7 +37,7 @@ export function UserProfileDropdown() {
 
   const handleLogout = () => {
     logout();
-    router.push('/');
+    router.push("/");
   };
 
   const getInitials = () => {
@@ -45,7 +45,7 @@ export function UserProfileDropdown() {
   };
 
   const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   return (
@@ -76,7 +76,7 @@ export function UserProfileDropdown() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={toggleTheme}>
-            {theme === 'dark' ? (
+            {theme === "dark" ? (
               <>
                 <Sun className="mr-2 h-4 w-4" />
                 <span>Light Mode</span>
@@ -102,14 +102,19 @@ export function UserProfileDropdown() {
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Are you sure you want to log out?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              You will be redirected to the login page and will need to sign in again to access your account.
+              You will be redirected to the login page and will need to sign in
+              again to access your account.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLogout}>Log out</AlertDialogAction>
+            <AlertDialogAction onClick={handleLogout}>
+              Log out
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
