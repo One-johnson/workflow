@@ -53,7 +53,7 @@ export default function MemberDocumentsPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">My Documents</h1>
           <p className="text-muted-foreground mt-1">
-            View and download your documents
+            View and download your documents. Thank you.
           </p>
         </div>
 
