@@ -18,18 +18,17 @@ export default defineSchema({
     name: v.string(),
     companyIdNumber: v.string(),
     description: v.optional(v.string()),
-    logo: v.optional(v.string()),
-    address: v.optional(v.string()),
-    phone: v.optional(v.string()),
-    email: v.optional(v.string()),
     createdAt: v.number(),
     createdBy: v.id("users"),
-  }).index("by_name", ["name"]),
+  })
+    .index("by_name", ["name"])
+    .index("by_companyId", ["companyIdNumber"]),
 
   members: defineTable({
     userId: v.id("users"),
     companyId: v.id("companies"),
-    memberIdNumber: v.string(),
+    staffId: v.string(), // Format: 2 letters + 6 digits (e.g., JD123456)
+    idCardNumber: v.optional(v.string()),
     firstName: v.string(),
     lastName: v.string(),
     email: v.string(),
@@ -38,20 +37,35 @@ export default defineSchema({
     dateOfBirth: v.optional(v.string()),
     position: v.optional(v.string()),
     department: v.optional(v.string()),
+    nextOfKin: v.optional(v.string()),
+    emergencyContact: v.optional(v.string()),
+    region: v.optional(v.string()),
+    branch: v.optional(v.string()),
     dateJoined: v.number(),
-   createdBy: v.optional(v.id("users")),
     status: v.union(v.literal("active"), v.literal("dormant")),
+    dormantReason: v.optional(
+      v.union(
+        v.literal("resignation"),
+        v.literal("retirement"),
+        v.literal("dismissal"),
+        v.literal("deferred"),
+        v.literal("other")
+      )
+    ),
+    dormantNote: v.optional(v.string()),
   })
     .index("by_company", ["companyId"])
     .index("by_user", ["userId"])
-    .index("by_email", ["email"]),
+    .index("by_email", ["email"])
+    .index("by_status", ["status"])
+    .index("by_staffId", ["staffId"]),
 
   documents: defineTable({
     memberId: v.id("members"),
     companyId: v.id("companies"),
     title: v.string(),
     description: v.optional(v.string()),
-    fileUrl: v.string(),
+    storageId: v.string(), // Convex storage ID
     fileType: v.string(),
     fileSize: v.number(),
     uploadedBy: v.id("users"),

@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import type React from 'react';
-import { createContext, useContext, useState, useEffect } from 'react';
-import type { Id } from '../../convex/_generated/dataModel';
+import type React from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import type { Id } from "../../convex/_generated/dataModel";
 
 interface User {
-  userId: Id<'users'>;
+  userId: Id<"users">;
   email: string;
-  role: 'admin' | 'member';
-  companyId?: Id<'companies'>;
+  role: "admin" | "member";
+  companyId?: Id<"companies">;
   firstName: string;
   lastName: string;
 }
@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
@@ -36,12 +36,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = (userData: User) => {
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem("user", JSON.stringify(userData));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem("user");
   };
 
   return (
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

@@ -1,114 +1,36 @@
-import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
+import { mutation, query } from "./_generated/server";
 
-function generateCompanyId(): string {
-  return Math.floor(10000000 + Math.random() * 90000000).toString();
+// Helper to generate Company ID: 2 letters (from name) + 6 random digits
+function generateCompanyId(companyName: string): string {
+  // Get first two letters from company name, or use XX if less than 2 chars
+  const prefix = companyName
+    .replace(/[^a-zA-Z]/g, "")
+    .substring(0, 2)
+    .toUpperCase()
+    .padEnd(2, "X");
+  const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
+  return prefix + randomDigits;
 }
-
 
 export const create = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
-    logo: v.optional(v.string()),
-    address: v.optional(v.string()),
-    phone: v.optional(v.string()),
-    email: v.optional(v.string()),
     createdBy: v.id("users"),
   },
   handler: async (ctx, args) => {
- const companyIdNumber = generateCompanyId();
+    const companyIdNumber = generateCompanyId(args.name);
 
     const companyId = await ctx.db.insert("companies", {
       name: args.name,
+      companyIdNumber,
       description: args.description,
-      logo: args.logo,
-      address: args.address,
-      phone: args.phone,
-      email: args.email,
       createdAt: Date.now(),
       createdBy: args.createdBy,
-      companyIdNumber: ""
     });
 
-  return { companyId, companyIdNumber };
-  },
-});
-
-export const list = query({
-  handler: async (ctx) => {
-    const companies = await ctx.db.query("companies").collect();
-    return companies;
-  },
-});
-
-export const get = query({
-  args: { id: v.id("companies") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
-  },
-});
-
-export const update = mutation({
-  args: {
-    id: v.id("companies"),
-    name: v.string(),
-    description: v.optional(v.string()),
-    logo: v.optional(v.string()),
-    address: v.optional(v.string()),
-    phone: v.optional(v.string()),
-    email: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, {
-      name: args.name,
-      description: args.description,
-      logo: args.logo,
-      address: args.address,
-      phone: args.phone,
-      email: args.email,
-    });
-  },
-});
-
-export const remove = mutation({
-  args: { id: v.id("companies") },
-  handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
-  },
-});
-
-export const getStats = query({
-  args: { companyId: v.id("companies") },
-  handler: async (ctx, args) => {
-    const members = await ctx.db
-      .query("members")
-      .withIndex("by_company", (q) => q.eq("companyId", args.companyId! as Id<"companies">))
-      .collect();
-
-    const documents = await ctx.db
-      .query("documents")
-      .withIndex("by_company", (q) => q.eq("companyId", args.companyId! as Id<"companies">))
-      .collect();
-
-    return {
-      totalMembers: members.length,
-      activeMembers: members.filter((m) => m.status === "active").length,
-      totalDocuments: documents.length,
-    };
-  },
-});
-
-export const getMembersWithDetails = query({
-  args: { companyId: v.id("companies") },
-  handler: async (ctx, args) => {
-    const members = await ctx.db
-      .query("members")
-      .withIndex("by_company", (q) => q.eq("companyId", args.companyId! as Id<"companies">))
-      .collect();
-
-    return members;
+    return { companyId, companyIdNumber };
   },
 });
 
@@ -123,57 +45,161 @@ export const createBulk = mutation({
     createdBy: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const results: any[] | PromiseLike<any[]> = [];
-    for (const company of args.companies) {
-      const companyIdNumber = generateCompanyId();
-      const id = await ctx.db.insert("companies", {
-        name: company.name,
-        companyIdNumber,
-        description: company.description,
-        createdAt: Date.now(),
-        createdBy: args.createdBy,
-      });
-      results.push({ id, companyIdNumber });
-    }
+    const results = await Promise.all(
+      args.companies.map(async (company) => {
+        const companyIdNumber = generateCompanyId(company.name);
+        const companyId = await ctx.db.insert("companies", {
+          name: company.name,
+          companyIdNumber,
+          description: company.description,
+          createdAt: Date.now(),
+          createdBy: args.createdBy,
+        });
+        return { companyId, companyIdNumber, name: company.name };
+      })
+    );
     return results;
+  },
+});
+
+export const list = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("companies").order("desc").collect();
+  },
+});
+
+export const getById = query({
+  args: { id: v.id("companies") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const update = mutation({
+  args: {
+    id: v.id("companies"),
+    name: v.string(),
+    description: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...updates } = args;
+    await ctx.db.patch(id, updates);
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("companies") },
+  handler: async (ctx, args) => {
+    // Check if there are any members in this company
+    const members = await ctx.db
+      .query("members")
+      .withIndex("by_company", (q) => q.eq("companyId", args.id))
+      .collect();
+
+    if (members.length > 0) {
+      throw new Error("Cannot delete company with existing members");
+    }
+
+    await ctx.db.delete(args.id);
   },
 });
 
 export const removeBulk = mutation({
   args: { ids: v.array(v.id("companies")) },
   handler: async (ctx, args) => {
+    const errors: string[] = [];
+    const deleted: string[] = [];
+
     for (const id of args.ids) {
-      await ctx.db.delete(id);
+      try {
+        const members = await ctx.db
+          .query("members")
+          .withIndex("by_company", (q) => q.eq("companyId", id))
+          .collect();
+
+        if (members.length > 0) {
+          const company = await ctx.db.get(id);
+          errors.push(`${company?.name || id}: has existing members`);
+        } else {
+          await ctx.db.delete(id);
+          deleted.push(id);
+        }
+      } catch (error) {
+        errors.push(`${id}: ${error}`);
+      }
     }
+
+    return { deleted, errors };
   },
 });
 
-export const globalSearch = query({
-  args: { searchTerm: v.string() },
+// Get members with details for a company
+export const getMembersWithDetails = query({
+  args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    const term = args.searchTerm.toLowerCase();
-    
-    const companies = await ctx.db.query("companies").collect();
-    const members = await ctx.db.query("members").collect();
+    const members = await ctx.db
+      .query("members")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .collect();
 
-    const matchedCompanies = companies.filter(
-      (c) =>
-        c.name.toLowerCase().includes(term) ||
-        c.companyIdNumber.includes(term)
-    );
+    return members;
+  },
+});
 
-    const matchedMembers = members.filter(
-      (m) =>
-        m.firstName.toLowerCase().includes(term) ||
-        m.lastName.toLowerCase().includes(term) ||
-        m.email.toLowerCase().includes(term) ||
-        m.memberIdNumber.includes(term)
-    );
+// Get company statistics for hover card
+export const getStatistics = query({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const members = await ctx.db
+      .query("members")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .collect();
+
+    const totalMembers = members.length;
+    const activeMembers = members.filter((m) => m.status === "active").length;
+    const dormantMembers = members.filter((m) => m.status === "dormant").length;
 
     return {
-      companies: matchedCompanies,
-      members: matchedMembers,
+      totalMembers,
+      activeMembers,
+      dormantMembers,
+      activePercentage:
+        totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 100) : 0,
+      dormantPercentage:
+        totalMembers > 0
+          ? Math.round((dormantMembers / totalMembers) * 100)
+          : 0,
     };
   },
 });
 
+// Global search for companies and members
+export const globalSearch = query({
+  args: { searchTerm: v.string() },
+  handler: async (ctx, args) => {
+    const searchLower = args.searchTerm.toLowerCase();
+
+    // Search companies by name or ID
+    const allCompanies = await ctx.db.query("companies").collect();
+    const companies = allCompanies.filter(
+      (c) =>
+        c.name.toLowerCase().includes(searchLower) ||
+        c.companyIdNumber.includes(searchLower)
+    );
+
+    // Search members by name, email, or ID
+    const allMembers = await ctx.db.query("members").collect();
+    const members = allMembers.filter(
+      (m) =>
+        m.firstName.toLowerCase().includes(searchLower) ||
+        m.lastName.toLowerCase().includes(searchLower) ||
+        m.email.toLowerCase().includes(searchLower) ||
+        m.staffId.includes(searchLower)
+    );
+
+    return {
+      companies: companies.slice(0, 5),
+      members: members.slice(0, 5),
+    };
+  },
+});

@@ -1,23 +1,18 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import { Search, Building2, Users, X } from 'lucide-react';
-import { Input } from './ui/input';
-import { Button } from './ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
-import { Badge } from './ui/badge';
-import { ScrollArea } from './ui/scroll-area';
-import type { Id } from '../../convex/_generated/dataModel';
+import { useState, useEffect } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Search, Building2, Users, X } from "lucide-react";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Badge } from "./ui/badge";
+import { ScrollArea } from "./ui/scroll-area";
+import type { Id } from "../../convex/_generated/dataModel";
 
 interface Company {
-  _id: Id<'companies'>;
+  _id: Id<"companies">;
   companyIdNumber: string;
   name: string;
   description?: string;
@@ -25,7 +20,7 @@ interface Company {
 }
 
 interface Member {
-  _id: Id<'members'>;
+  _id: Id<"members">;
   memberIdNumber: string;
   firstName: string;
   lastName: string;
@@ -39,16 +34,16 @@ interface Member {
 
 export function GlobalSearch() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [debouncedTerm, setDebouncedTerm] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedTerm, setDebouncedTerm] = useState<string>("");
   const [selectedItem, setSelectedItem] = useState<{
-    type: 'company' | 'member';
+    type: "company" | "member";
     data: Company | Member;
   } | null>(null);
 
   const searchResults = useQuery(
     api.companies.globalSearch,
-    debouncedTerm.length >= 2 ? { searchTerm: debouncedTerm } : 'skip'
+    debouncedTerm.length >= 2 ? { searchTerm: debouncedTerm } : "skip"
   );
 
   // Debounce search
@@ -62,16 +57,19 @@ export function GlobalSearch() {
   // Keyboard shortcut (Ctrl+K or Cmd+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         setIsOpen(true);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleItemClick = (type: 'company' | 'member', data: Company | Member) => {
+  const handleItemClick = (
+    type: "company" | "member",
+    data: Company | Member
+  ) => {
     setSelectedItem({ type, data });
     setIsOpen(false);
   };
@@ -95,6 +93,7 @@ export function GlobalSearch() {
       {/* Search Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-2xl p-0">
+          <DialogTitle></DialogTitle>
           <div className="flex items-center border-b px-4">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
@@ -109,7 +108,7 @@ export function GlobalSearch() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => setSearchTerm('')}
+                onClick={() => setSearchTerm("")}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -137,11 +136,13 @@ export function GlobalSearch() {
                           key={company._id}
                           variant="ghost"
                           className="w-full justify-start h-auto py-3 px-3"
-                          onClick={() => handleItemClick('company', company)}
+                          onClick={() => handleItemClick("company", company)}
                         >
                           <div className="flex-1 text-left">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium">{company.name}</span>
+                              <span className="font-medium">
+                                {company.name}
+                              </span>
                               <Badge variant="outline" className="text-xs">
                                 {company.companyIdNumber}
                               </Badge>
@@ -171,7 +172,12 @@ export function GlobalSearch() {
                           key={member._id}
                           variant="ghost"
                           className="w-full justify-start h-auto py-3 px-3"
-                          onClick={() => handleItemClick('member', member)}
+                          onClick={() =>
+                            handleItemClick("member", {
+                              ...member,
+                              memberIdNumber: member.staffId, // Provide the required property
+                            })
+                          }
                         >
                           <div className="flex-1 text-left">
                             <div className="flex items-center gap-2 mb-1">
@@ -179,11 +185,13 @@ export function GlobalSearch() {
                                 {member.firstName} {member.lastName}
                               </span>
                               <Badge variant="outline" className="text-xs">
-                                {member.memberIdNumber}
+                                {member.staffId}
                               </Badge>
                               <Badge
                                 variant={
-                                  member.status === 'active' ? 'default' : 'secondary'
+                                  member.status === "active"
+                                    ? "default"
+                                    : "secondary"
                                 }
                                 className="text-xs"
                               >
@@ -195,7 +203,8 @@ export function GlobalSearch() {
                               {member.position && (
                                 <p>
                                   {member.position}
-                                  {member.department && ` • ${member.department}`}
+                                  {member.department &&
+                                    ` • ${member.department}`}
                                 </p>
                               )}
                             </div>
@@ -211,7 +220,7 @@ export function GlobalSearch() {
                   searchResults.members.length === 0 && (
                     <div className="text-center py-12 text-muted-foreground">
                       <Search className="h-12 w-12 mx-auto mb-2 opacity-30" />
-                      <p>No results found for "{searchTerm}"</p>
+                      <p>No results found for &quot;{searchTerm}&quot;</p>
                     </div>
                   )}
               </div>
@@ -226,7 +235,7 @@ export function GlobalSearch() {
       </Dialog>
 
       {/* Detail Dialog for Company */}
-      {selectedItem && selectedItem.type === 'company' && (
+      {selectedItem && selectedItem.type === "company" && (
         <Dialog open={true} onOpenChange={() => setSelectedItem(null)}>
           <DialogContent className="max-w-xl">
             <DialogHeader>
@@ -276,7 +285,7 @@ export function GlobalSearch() {
       )}
 
       {/* Detail Dialog for Member */}
-      {selectedItem && selectedItem.type === 'member' && (
+      {selectedItem && selectedItem.type === "member" && (
         <Dialog open={true} onOpenChange={() => setSelectedItem(null)}>
           <DialogContent className="max-w-xl">
             <DialogHeader>
@@ -291,7 +300,7 @@ export function GlobalSearch() {
                   Full Name
                 </label>
                 <p className="text-lg font-semibold">
-                  {(selectedItem.data as Member).firstName}{' '}
+                  {(selectedItem.data as Member).firstName}{" "}
                   {(selectedItem.data as Member).lastName}
                 </p>
               </div>
@@ -340,9 +349,9 @@ export function GlobalSearch() {
                 <div className="mt-1">
                   <Badge
                     variant={
-                      (selectedItem.data as Member).status === 'active'
-                        ? 'default'
-                        : 'secondary'
+                      (selectedItem.data as Member).status === "active"
+                        ? "default"
+                        : "secondary"
                     }
                   >
                     {(selectedItem.data as Member).status}

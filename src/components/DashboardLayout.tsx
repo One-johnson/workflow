@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import type React from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useRouter, usePathname } from 'next/navigation';
-import { Button } from './ui/button';
-import { NotificationBell } from './NotificationBell';
+import type React from "react";
+import { useAuth } from "../context/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
+import { Button } from "./ui/button";
+import { NotificationBell } from "./NotificationBell";
 import {
   Building2,
   Users,
@@ -13,8 +13,8 @@ import {
   LogOut,
   Menu,
   X,
-} from 'lucide-react';
-import { useState } from 'react';
+} from "lucide-react";
+import { useState } from "react";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -28,20 +28,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleLogout = () => {
     logout();
-    router.push('/');
+    router.push("/");
   };
 
-  const navigation = user?.role === 'admin'
-    ? [
-        { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-        { name: 'Companies', href: '/admin/companies', icon: Building2 },
-        { name: 'Members', href: '/admin/members', icon: Users },
-        { name: 'Documents', href: '/admin/documents', icon: FileText },
-      ]
-    : [
-        { name: 'Dashboard', href: '/member', icon: LayoutDashboard },
-        { name: 'My Documents', href: '/member/documents', icon: FileText },
-      ];
+  const navigation =
+    user?.role === "admin"
+      ? [
+          { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+          { name: "Companies", href: "/admin/companies", icon: Building2 },
+          { name: "Members", href: "/admin/members", icon: Users },
+          { name: "Documents", href: "/admin/documents", icon: FileText },
+        ]
+      : [
+          { name: "Dashboard", href: "/member", icon: LayoutDashboard },
+          { name: "My Documents", href: "/member/documents", icon: FileText },
+        ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -64,7 +65,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </Button>
               <div className="flex items-center gap-2">
                 <Building2 className="h-8 w-8 text-blue-600" />
-                <h1 className="text-xl font-bold hidden sm:block">Profile Hub</h1>
+                <h1 className="text-xl font-bold hidden sm:block">
+                  Profile Hub
+                </h1>
               </div>
             </div>
 
@@ -86,7 +89,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       <div className="flex">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex md:flex-shrink-0">
+        <aside className="hidden md:flex md:shrink-0">
           <div className="flex flex-col w-64 bg-white border-r min-h-[calc(100vh-4rem)]">
             <nav className="flex-1 px-4 py-6 space-y-2">
               {navigation.map((item) => {
@@ -94,7 +97,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 return (
                   <Button
                     key={item.name}
-                    variant={isActive ? 'secondary' : 'ghost'}
+                    variant={isActive ? "secondary" : "ghost"}
                     className="w-full justify-start"
                     onClick={() => router.push(item.href)}
                   >
@@ -121,7 +124,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   return (
                     <Button
                       key={item.name}
-                      variant={isActive ? 'secondary' : 'ghost'}
+                      variant={isActive ? "secondary" : "ghost"}
                       className="w-full justify-start"
                       onClick={() => {
                         router.push(item.href);

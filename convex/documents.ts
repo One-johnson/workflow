@@ -1,29 +1,43 @@
-import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
 
+// Generate upload URL for file storage
+export const generateUploadUrl = mutation(async (ctx) => {
+  return await ctx.storage.generateUploadUrl();
+});
+
+// Create document with storage ID
 export const create = mutation({
   args: {
     memberId: v.id("members"),
     companyId: v.id("companies"),
     title: v.string(),
     description: v.optional(v.string()),
-    fileUrl: v.string(),
+    storageId: v.string(),
     fileType: v.string(),
     fileSize: v.number(),
     uploadedBy: v.id("users"),
   },
   handler: async (ctx, args) => {
     const documentId = await ctx.db.insert("documents", {
-      ...args,
+      memberId: args.memberId,
+      companyId: args.companyId,
+      title: args.title,
+      description: args.description,
+      storageId: args.storageId,
+      fileType: args.fileType,
+      fileSize: args.fileSize,
+      uploadedBy: args.uploadedBy,
       uploadedAt: Date.now(),
     });
 
+    // Create notification for member
     const member = await ctx.db.get(args.memberId);
     if (member) {
       await ctx.db.insert("notifications", {
         userId: member.userId,
         title: "New Document Uploaded",
-        message: `A new document "${args.title}" has been uploaded`,
+        message: `A new document "${args.title}" has been uploaded for you.`,
         type: "info",
         read: false,
         createdAt: Date.now(),
@@ -35,69 +49,26 @@ export const create = mutation({
   },
 });
 
-export const list = query({
-  args: {
-    memberId: v.optional(v.id("members")),
-    companyId: v.optional(v.id("companies")),
-  },
-  handler: async (ctx, args) => {
-    if (args.memberId) {
-      return await ctx.db
-        .query("documents")
-        .withIndex("by_member", (q) => q.eq("memberId", args.memberId!))
-        .collect();
-    }
+// List all documents with file URLs
+export const listAllWithDetails = query({
+  handler: async (ctx) => {
+    const documents = await ctx.db.query("documents").collect();
 
-    if (args.companyId) {
-      return await ctx.db
-        .query("documents")
-        .withIndex("by_company", (q) => q.eq("companyId", args.companyId!))
-        .collect();
-    }
-
-    return await ctx.db.query("documents").collect();
-  },
-});
-
-export const get = query({
-  args: { id: v.id("documents") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
-  },
-});
-
-export const update = mutation({
-  args: {
-    id: v.id("documents"),
-    title: v.string(),
-    description: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
-  },
-});
-
-export const remove = mutation({
-  args: { id: v.id("documents") },
-  handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
-  },
-});
-
-export const getByMemberWithDetails = query({
-  args: { memberId: v.id("members") },
-  handler: async (ctx, args) => {
-    const documents = await ctx.db
-      .query("documents")
-      .withIndex("by_member", (q) => q.eq("memberId", args.memberId))
-      .collect();
-
-    const documentsWithUploader = await Promise.all(
+    // Get file URLs and member/company details
+    const documentsWithDetails = await Promise.all(
       documents.map(async (doc) => {
+        const fileUrl = await ctx.storage.getUrl(doc.storageId);
+        const member = await ctx.db.get(doc.memberId);
+        const company = await ctx.db.get(doc.companyId);
         const uploader = await ctx.db.get(doc.uploadedBy);
+
         return {
           ...doc,
+          fileUrl,
+          memberName: member
+            ? `${member.firstName} ${member.lastName}`
+            : "Unknown",
+          companyName: company?.name || "Unknown",
           uploaderName: uploader
             ? `${uploader.firstName} ${uploader.lastName}`
             : "Unknown",
@@ -105,23 +76,11 @@ export const getByMemberWithDetails = query({
       })
     );
 
-    return documentsWithUploader;
+    return documentsWithDetails;
   },
 });
 
-export const listAll = query({
-  handler: async (ctx) => {
-    const documents = await ctx.db.query("documents").collect();
-    return documents;
-  },
-});
-
-export const generateUploadUrl = mutation({
-  handler: async (ctx) => {
-    return await ctx.storage.generateUploadUrl();
-  },
-});
-
+// Get document URL
 export const getUrl = query({
   args: { storageId: v.string() },
   handler: async (ctx, args) => {
@@ -129,39 +88,55 @@ export const getUrl = query({
   },
 });
 
-export const listAllWithDetails = query({
-  handler: async (ctx) => {
-    const documents = await ctx.db.query("documents").collect();
-    
-    const docsWithDetails = await Promise.all(
+// List documents by member with URLs
+export const list = query({
+  args: { memberId: v.id("members") },
+  handler: async (ctx, args) => {
+    const documents = await ctx.db
+      .query("documents")
+      .withIndex("by_member", (q) => q.eq("memberId", args.memberId))
+      .collect();
+
+    const documentsWithUrls = await Promise.all(
       documents.map(async (doc) => {
-        const member = await ctx.db.get(doc.memberId);
+        const fileUrl = await ctx.storage.getUrl(doc.storageId);
         const uploader = await ctx.db.get(doc.uploadedBy);
-        const url = await ctx.storage.getUrl(doc.fileUrl);
-        
         return {
           ...doc,
-          fileUrl: url || doc.fileUrl,
-          memberName: member ? `${member.firstName} ${member.lastName}` : "Unknown",
-          uploaderName: uploader ? `${uploader.firstName} ${uploader.lastName}` : "Unknown",
+          fileUrl,
+          uploaderName: uploader
+            ? `${uploader.firstName} ${uploader.lastName}`
+            : "Unknown",
         };
       })
     );
-    
-    return docsWithDetails;
+
+    return documentsWithUrls;
   },
 });
 
-export const getWithUrl = query({
+// Remove document
+export const remove = mutation({
   args: { id: v.id("documents") },
   handler: async (ctx, args) => {
-    const doc = await ctx.db.get(args.id);
-    if (!doc) return null;
-    
-    const url = await ctx.storage.getUrl(doc.fileUrl);
-    return {
-      ...doc,
-      fileUrl: url || doc.fileUrl,
-    };
+    const document = await ctx.db.get(args.id);
+    if (document) {
+      // Delete file from storage
+      await ctx.storage.delete(document.storageId);
+      // Delete document record
+      await ctx.db.delete(args.id);
+    }
+  },
+});
+
+// Get document by ID with URL
+export const getById = query({
+  args: { id: v.id("documents") },
+  handler: async (ctx, args) => {
+    const document = await ctx.db.get(args.id);
+    if (!document) return null;
+
+    const fileUrl = await ctx.storage.getUrl(document.storageId);
+    return { ...document, fileUrl };
   },
 });

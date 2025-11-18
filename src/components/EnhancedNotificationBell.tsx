@@ -1,15 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import { Bell, Eye, Trash2 } from 'lucide-react';
-import { Button } from './ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from './ui/popover';
+import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Bell, Eye, Trash2 } from "lucide-react";
+import { Button } from "./ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,13 +15,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './ui/alert-dialog';
-import { ScrollArea } from './ui/scroll-area';
-import { Badge } from './ui/badge';
-import { useAuth } from '../context/AuthContext';
-import { formatDistanceToNow } from 'date-fns';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+} from "./ui/alert-dialog";
+import { ScrollArea } from "./ui/scroll-area";
+import { Badge } from "./ui/badge";
+import { useAuth } from "../context/AuthContext";
+import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export function EnhancedNotificationBell() {
   const { user } = useAuth();
@@ -35,12 +31,12 @@ export function EnhancedNotificationBell() {
 
   const notifications = useQuery(
     api.notifications.list,
-    user ? { userId: user.userId } : 'skip'
+    user ? { userId: user.userId } : "skip"
   );
 
   const unreadCount = useQuery(
     api.notifications.unreadCount,
-    user ? { userId: user.userId } : 'skip'
+    user ? { userId: user.userId } : "skip"
   );
 
   const markAsRead = useMutation(api.notifications.markAsRead);
@@ -50,13 +46,14 @@ export function EnhancedNotificationBell() {
   if (!user) return null;
 
   const handleNotificationClick = async (notificationId: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await markAsRead({ id: notificationId as any });
   };
 
   const handleMarkAllAsRead = async () => {
     if (user) {
       await markAllAsRead({ userId: user.userId });
-      toast.success('All notifications marked as read');
+      toast.success("All notifications marked as read");
     }
   };
 
@@ -65,13 +62,15 @@ export function EnhancedNotificationBell() {
       await deleteAll({ userId: user.userId });
       setShowClearDialog(false);
       setIsOpen(false);
-      toast.success('All notifications cleared');
+      toast.success("All notifications cleared");
     }
   };
 
   const handleViewAll = () => {
     setIsOpen(false);
-    router.push(user.role === 'admin' ? '/admin/notifications' : '/member/notifications');
+    router.push(
+      user.role === "admin" ? "/admin/notifications" : "/member/notifications"
+    );
   };
 
   return (
@@ -85,7 +84,7 @@ export function EnhancedNotificationBell() {
                 variant="destructive"
                 className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
               >
-                {unreadCount > 9 ? '9+' : unreadCount}
+                {unreadCount > 9 ? "9+" : unreadCount}
               </Badge>
             )}
           </Button>
@@ -128,18 +127,22 @@ export function EnhancedNotificationBell() {
                     <div
                       key={notification._id}
                       className={`p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
-                        !notification.read ? 'bg-blue-50 dark:bg-blue-950/20' : ''
+                        !notification.read
+                          ? "bg-blue-50 dark:bg-blue-950/20"
+                          : ""
                       }`}
                       onClick={() => handleNotificationClick(notification._id)}
                     >
                       <div className="flex items-start gap-3">
                         <div
                           className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                            !notification.read ? 'bg-blue-500' : 'bg-gray-300'
+                            !notification.read ? "bg-blue-500" : "bg-gray-300"
                           }`}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">{notification.title}</p>
+                          <p className="font-medium text-sm">
+                            {notification.title}
+                          </p>
                           <p className="text-sm text-muted-foreground mt-1">
                             {notification.message}
                           </p>
@@ -181,7 +184,8 @@ export function EnhancedNotificationBell() {
           <AlertDialogHeader>
             <AlertDialogTitle>Clear all notifications?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all your notifications. This action cannot be undone.
+              This will permanently delete all your notifications. This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

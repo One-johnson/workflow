@@ -1,8 +1,14 @@
-import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import bcrypt from "bcryptjs";
+import { mutation, query } from "./_generated/server";
 
-// Generate random 8-digit password
+// Helper to generate Staff ID: 2 letters (initials) + 6 random digits
+function generateStaffId(firstName: string, lastName: string): string {
+  const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+  const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
+  return initials + randomDigits;
+}
+
+// Helper to generate 8-digit password
 function generatePassword(): string {
   return Math.floor(10000000 + Math.random() * 90000000).toString();
 }
@@ -13,14 +19,32 @@ export const create = mutation({
     firstName: v.string(),
     lastName: v.string(),
     email: v.string(),
+    password: v.string(),
+    idCardNumber: v.optional(v.string()),
     phone: v.optional(v.string()),
     address: v.optional(v.string()),
     dateOfBirth: v.optional(v.string()),
     position: v.optional(v.string()),
     department: v.optional(v.string()),
-    createdBy: v.id("users"),
+    nextOfKin: v.optional(v.string()),
+    emergencyContact: v.optional(v.string()),
+    region: v.optional(v.string()),
+    branch: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("dormant")),
+    dormantReason: v.optional(
+      v.union(
+        v.literal("resignation"),
+        v.literal("retirement"),
+        v.literal("dismissal"),
+        v.literal("deferred"),
+        v.literal("other")
+      )
+    ),
+    dormantNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const bcrypt = await import("bcryptjs");
+
     // Check if email already exists
     const existingUser = await ctx.db
       .query("users")
@@ -28,29 +52,32 @@ export const create = mutation({
       .first();
 
     if (existingUser) {
-      throw new Error("Email already registered");
+      throw new Error("Email already exists");
     }
 
-    // Generate 8-digit password
-    const plainPassword = generatePassword();
-    const passwordHash = await bcrypt.hash(plainPassword, 10);
+    // Hash password
+    const passwordHash = await bcrypt.hash(args.password, 10);
+
+    // Generate staff ID
+    const staffId = generateStaffId(args.firstName, args.lastName);
 
     // Create user account
     const userId = await ctx.db.insert("users", {
       email: args.email,
       passwordHash,
       role: "member",
+      companyId: args.companyId,
       firstName: args.firstName,
       lastName: args.lastName,
-      companyId: args.companyId,
-      createdAt: 0
+      createdAt: Date.now(),
     });
 
     // Create member profile
     const memberId = await ctx.db.insert("members", {
       userId,
       companyId: args.companyId,
-      memberIdNumber: plainPassword,
+      staffId,
+      idCardNumber: args.idCardNumber,
       firstName: args.firstName,
       lastName: args.lastName,
       email: args.email,
@@ -59,133 +86,35 @@ export const create = mutation({
       dateOfBirth: args.dateOfBirth,
       position: args.position,
       department: args.department,
+      nextOfKin: args.nextOfKin,
+      emergencyContact: args.emergencyContact,
+      region: args.region,
+      branch: args.branch,
       dateJoined: Date.now(),
-      status: "active",
+      status: args.status,
+      dormantReason: args.dormantReason,
+      dormantNote: args.dormantNote,
     });
 
-    // Send notification to admin
-    await ctx.db.insert("notifications", {
-      userId: args.createdBy,
-      title: "New Member Added",
-      message: `${args.firstName} ${args.lastName} has been added to the system`,
-      type: "success",
-      read: false,
-      createdAt: Date.now(),
-      relatedId: memberId,
-    });
+    // Create notification for admin
+    const admins = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("role"), "admin"))
+      .collect();
 
-    // Return member ID and generated password
-    return { memberId, generatedPassword: plainPassword };
-  },
-});
-
-export const list = query({
-  args: { companyId: v.optional(v.id("companies")) },
-  handler: async (ctx, args) => {
-    if (args.companyId) {
-      return await ctx.db
-        .query("members")
-        .withIndex("by_company", (q) => q.eq("companyId", args.companyId!))
-        .collect();
-    }
-    return await ctx.db.query("members").collect();
-  },
-});
-
-export const get = query({
-  args: { id: v.id("members") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
-  },
-});
-
-export const update = mutation({
-  args: {
-    id: v.id("members"),
-    firstName: v.string(),
-    lastName: v.string(),
-    email: v.string(),
-    phone: v.optional(v.string()),
-    address: v.optional(v.string()),
-    dateOfBirth: v.optional(v.string()),
-    position: v.optional(v.string()),
-    department: v.optional(v.string()),
-    status: v.union(v.literal("active"), v.literal("dormant")),
-  },
-  handler: async (ctx, args) => {
-    const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
-  },
-});
-
-export const remove = mutation({
-  args: { id: v.id("members") },
-  handler: async (ctx, args) => {
-    const member = await ctx.db.get(args.id);
-    if (member) {
-      const documents = await ctx.db
-        .query("documents")
-        .withIndex("by_member", (q) => q.eq("memberId", args.id))
-        .collect();
-
-      for (const doc of documents) {
-        await ctx.db.delete(doc._id);
-      }
+    for (const admin of admins) {
+      await ctx.db.insert("notifications", {
+        userId: admin._id,
+        title: "New Member Added",
+        message: `${args.firstName} ${args.lastName} has been added as a new member.`,
+        type: "success",
+        read: false,
+        createdAt: Date.now(),
+        relatedId: memberId,
+      });
     }
 
-    await ctx.db.delete(args.id);
-  },
-});
-
-export const search = query({
-  args: {
-    companyId: v.optional(v.id("companies")),
-    searchTerm: v.string(),
-    status: v.optional(v.union(v.literal("active"), v.literal("dormant"), v.literal("all"))),
-  },
-  handler: async (ctx, args) => {
-    let members = await ctx.db.query("members").collect();
-
-    if (args.companyId) {
-      members = members.filter((m) => m.companyId === args.companyId);
-    }
-
-    if (args.status && args.status !== "all") {
-      members = members.filter((m) => m.status === args.status);
-    }
-
-    if (args.searchTerm) {
-      const term = args.searchTerm.toLowerCase();
-      members = members.filter(
-        (m) =>
-          m.firstName.toLowerCase().includes(term) ||
-          m.lastName.toLowerCase().includes(term) ||
-          m.email.toLowerCase().includes(term) ||
-          (m.position && m.position.toLowerCase().includes(term))
-      );
-    }
-
-    return members;
-  },
-});
-
-export const toggleStatus = mutation({
-  args: { id: v.id("members") },
-  handler: async (ctx, args) => {
-    const member = await ctx.db.get(args.id);
-    if (!member) throw new Error("Member not found");
-
-    const newStatus = member.status === "active" ? "dormant" : "active";
-    await ctx.db.patch(args.id, { status: newStatus });
-    return newStatus;
-  },
-});
-
-export const getByStatus = query({
-  args: { status: v.union(v.literal("active"), v.literal("dormant")) },
-  handler: async (ctx, args) => {
-    const members = await ctx.db.query("members").collect();
-    return members.filter((m) => m.status === args.status);
+    return { memberId, staffId };
   },
 });
 
@@ -197,103 +126,383 @@ export const createBulk = mutation({
         firstName: v.string(),
         lastName: v.string(),
         email: v.string(),
+        idCardNumber: v.optional(v.string()),
         phone: v.optional(v.string()),
+        address: v.optional(v.string()),
+        dateOfBirth: v.optional(v.string()),
         position: v.optional(v.string()),
         department: v.optional(v.string()),
+        nextOfKin: v.optional(v.string()),
+        emergencyContact: v.optional(v.string()),
+        region: v.optional(v.string()),
+        branch: v.optional(v.string()),
+        status: v.union(v.literal("active"), v.literal("dormant")),
+        dormantReason: v.optional(
+          v.union(
+            v.literal("resignation"),
+            v.literal("retirement"),
+            v.literal("dismissal"),
+            v.literal("deferred"),
+            v.literal("other")
+          )
+        ),
+        dormantNote: v.optional(v.string()),
       })
     ),
-    createdBy: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const bcrypt = await import("bcryptjs");
     const results = [];
+    const errors = [];
+
     for (const member of args.members) {
-      // Check if email already exists
-      const existingUser = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", member.email))
-        .first();
+      try {
+        // Check if email already exists
+        const existingUser = await ctx.db
+          .query("users")
+          .withIndex("by_email", (q) => q.eq("email", member.email))
+          .first();
 
-      if (existingUser) {
-        results.push({ email: member.email, error: "Email already registered" });
-        continue;
+        if (existingUser) {
+          errors.push(`${member.email}: Email already exists`);
+          continue;
+        }
+
+        // Generate password and hash it
+        const password = generatePassword();
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Generate staff ID
+        const staffId = generateStaffId(member.firstName, member.lastName);
+
+        // Create user account
+        const userId = await ctx.db.insert("users", {
+          email: member.email,
+          passwordHash,
+          role: "member",
+          companyId: member.companyId,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          createdAt: Date.now(),
+        });
+
+        // Create member profile
+        const memberId = await ctx.db.insert("members", {
+          userId,
+          companyId: member.companyId,
+          staffId,
+          idCardNumber: member.idCardNumber,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          email: member.email,
+          phone: member.phone,
+          address: member.address,
+          dateOfBirth: member.dateOfBirth,
+          position: member.position,
+          department: member.department,
+          nextOfKin: member.nextOfKin,
+          emergencyContact: member.emergencyContact,
+          region: member.region,
+          branch: member.branch,
+          dateJoined: Date.now(),
+          status: member.status,
+          dormantReason: member.dormantReason,
+          dormantNote: member.dormantNote,
+        });
+
+        results.push({
+          memberId,
+          staffId,
+          email: member.email,
+          name: `${member.firstName} ${member.lastName}`,
+        });
+      } catch (error) {
+        errors.push(`${member.email}: ${error}`);
       }
-
-      // Generate password
-      const plainPassword = generatePassword();
-      const passwordHash = await bcrypt.hash(plainPassword, 10);
-
-      // Create user account
-      const userId = await ctx.db.insert("users", {
-        email: member.email,
-        passwordHash,
-        role: "member",
-        firstName: member.firstName,
-        lastName: member.lastName,
-        companyId: member.companyId,
-        createdAt: 0
-      });
-
-      // Create member profile
-      const memberId = await ctx.db.insert("members", {
-        userId,
-        companyId: member.companyId,
-        memberIdNumber: plainPassword,
-        firstName: member.firstName,
-        lastName: member.lastName,
-        email: member.email,
-        phone: member.phone,
-        position: member.position,
-        department: member.department,
-        dateJoined: Date.now(),
-        status: "active",
-      });
-
-      results.push({
-        memberId,
-        email: member.email,
-        password: plainPassword,
-        success: true,
-      });
     }
-    return results;
+
+    return { results, errors };
   },
 });
 
-export const removeBulk = mutation({
-  args: { ids: v.array(v.id("members")) },
+export const list = query({
+  handler: async (ctx) => {
+    const members = await ctx.db.query("members").order("desc").collect();
+
+    // Get company names
+    const membersWithCompany = await Promise.all(
+      members.map(async (member) => {
+        const company = await ctx.db.get(member.companyId);
+        return {
+          ...member,
+          companyName: company?.name || "Unknown",
+        };
+      })
+    );
+
+    return membersWithCompany;
+  },
+});
+
+export const getById = query({
+  args: { id: v.id("members") },
   handler: async (ctx, args) => {
-    for (const id of args.ids) {
-      const member = await ctx.db.get(id);
-      if (member) {
-        // Delete associated documents
-        const documents = await ctx.db
-          .query("documents")
-          .withIndex("by_member", (q) => q.eq("memberId", id))
-          .collect();
-        for (const doc of documents) {
-          await ctx.db.delete(doc._id);
-        }
-        // Delete member
-        await ctx.db.delete(id);
-      }
+    const member = await ctx.db.get(args.id);
+    if (!member) return null;
+
+    const company = await ctx.db.get(member.companyId);
+    return {
+      ...member,
+      companyName: company?.name || "Unknown",
+    };
+  },
+});
+
+export const getByUserId = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const member = await ctx.db
+      .query("members")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!member) return null;
+
+    const company = await ctx.db.get(member.companyId);
+    return {
+      ...member,
+      companyName: company?.name || "Unknown",
+    };
+  },
+});
+
+export const update = mutation({
+  args: {
+    id: v.id("members"),
+    firstName: v.string(),
+    lastName: v.string(),
+    email: v.string(),
+    idCardNumber: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    address: v.optional(v.string()),
+    dateOfBirth: v.optional(v.string()),
+    position: v.optional(v.string()),
+    department: v.optional(v.string()),
+    nextOfKin: v.optional(v.string()),
+    emergencyContact: v.optional(v.string()),
+    region: v.optional(v.string()),
+    branch: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("dormant")),
+    dormantReason: v.optional(
+      v.union(
+        v.literal("resignation"),
+        v.literal("retirement"),
+        v.literal("dismissal"),
+        v.literal("deferred"),
+        v.literal("other")
+      )
+    ),
+    dormantNote: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...updates } = args;
+    const member = await ctx.db.get(id);
+
+    if (!member) {
+      throw new Error("Member not found");
+    }
+
+    // Update member
+    await ctx.db.patch(id, updates);
+
+    // Update user email if changed
+    if (updates.email !== member.email) {
+      await ctx.db.patch(member.userId, {
+        email: updates.email,
+        firstName: updates.firstName,
+        lastName: updates.lastName,
+      });
     }
   },
 });
 
 export const updateBulk = mutation({
   args: {
-    updates: v.array(
-      v.object({
-        id: v.id("members"),
-        status: v.optional(v.union(v.literal("active"), v.literal("dormant"))),
-      })
+    ids: v.array(v.id("members")),
+    status: v.union(v.literal("active"), v.literal("dormant")),
+    dormantReason: v.optional(
+      v.union(
+        v.literal("resignation"),
+        v.literal("retirement"),
+        v.literal("dismissal"),
+        v.literal("deferred"),
+        v.literal("other")
+      )
     ),
+    dormantNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    for (const update of args.updates) {
-      if (update.status) {
-        await ctx.db.patch(update.id, { status: update.status });
+    const updated = [];
+    const errors = [];
+
+    for (const id of args.ids) {
+      try {
+        await ctx.db.patch(id, {
+          status: args.status,
+          dormantReason: args.dormantReason,
+          dormantNote: args.dormantNote,
+        });
+        updated.push(id);
+      } catch (error) {
+        errors.push(`${id}: ${error}`);
       }
     }
+
+    return { updated, errors };
+  },
+});
+
+export const toggleStatus = mutation({
+  args: { id: v.id("members") },
+  handler: async (ctx, args) => {
+    const member = await ctx.db.get(args.id);
+    if (!member) {
+      throw new Error("Member not found");
+    }
+
+    const newStatus = member.status === "active" ? "dormant" : "active";
+    await ctx.db.patch(args.id, {
+      status: newStatus,
+      // Clear dormant info when activating
+      dormantReason: newStatus === "active" ? undefined : member.dormantReason,
+      dormantNote: newStatus === "active" ? undefined : member.dormantNote,
+    });
+
+    return newStatus;
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("members") },
+  handler: async (ctx, args) => {
+    const member = await ctx.db.get(args.id);
+    if (!member) {
+      throw new Error("Member not found");
+    }
+
+    // Delete all documents for this member
+    const documents = await ctx.db
+      .query("documents")
+      .withIndex("by_member", (q) => q.eq("memberId", args.id))
+      .collect();
+
+    for (const doc of documents) {
+      await ctx.storage.delete(doc.storageId);
+      await ctx.db.delete(doc._id);
+    }
+
+    // Delete member
+    await ctx.db.delete(args.id);
+
+    // Delete user account
+    await ctx.db.delete(member.userId);
+  },
+});
+
+export const removeBulk = mutation({
+  args: { ids: v.array(v.id("members")) },
+  handler: async (ctx, args) => {
+    const deleted = [];
+    const errors = [];
+
+    for (const id of args.ids) {
+      try {
+        const member = await ctx.db.get(id);
+        if (!member) {
+          errors.push(`${id}: Member not found`);
+          continue;
+        }
+
+        // Delete all documents
+        const documents = await ctx.db
+          .query("documents")
+          .withIndex("by_member", (q) => q.eq("memberId", id))
+          .collect();
+
+        for (const doc of documents) {
+          await ctx.storage.delete(doc.storageId);
+          await ctx.db.delete(doc._id);
+        }
+
+        // Delete member and user
+        await ctx.db.delete(id);
+        await ctx.db.delete(member.userId);
+        deleted.push(id);
+      } catch (error) {
+        errors.push(`${id}: ${error}`);
+      }
+    }
+
+    return { deleted, errors };
+  },
+});
+
+export const search = query({
+  args: {
+    searchTerm: v.optional(v.string()),
+    companyId: v.optional(v.id("companies")),
+    status: v.optional(v.union(v.literal("active"), v.literal("dormant"))),
+  },
+  handler: async (ctx, args) => {
+    let members = await ctx.db.query("members").collect();
+
+    // Filter by company
+    if (args.companyId) {
+      members = members.filter((m) => m.companyId === args.companyId);
+    }
+
+    // Filter by status
+    if (args.status) {
+      members = members.filter((m) => m.status === args.status);
+    }
+
+    // Search by term
+    if (args.searchTerm) {
+      const searchLower = args.searchTerm.toLowerCase();
+      members = members.filter(
+        (m) =>
+          m.firstName.toLowerCase().includes(searchLower) ||
+          m.lastName.toLowerCase().includes(searchLower) ||
+          m.email.toLowerCase().includes(searchLower) ||
+          m.staffId.includes(searchLower) ||
+          m.position?.toLowerCase().includes(searchLower) ||
+          m.department?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Get company names
+    const membersWithCompany = await Promise.all(
+      members.map(async (member) => {
+        const company = await ctx.db.get(member.companyId);
+        return {
+          ...member,
+          companyName: company?.name || "Unknown",
+        };
+      })
+    );
+
+    return membersWithCompany;
+  },
+});
+
+export const getByStatus = query({
+  args: { status: v.union(v.literal("active"), v.literal("dormant")) },
+  handler: async (ctx, args) => {
+    const members = await ctx.db
+      .query("members")
+      .withIndex("by_status", (q) => q.eq("status", args.status))
+      .collect();
+
+    return members;
   },
 });

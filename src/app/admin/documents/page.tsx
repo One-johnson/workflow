@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import { useAuth } from '../../../context/AuthContext';
-import { AdminLayout } from '../../../components/AdminLayout';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+import { AdminLayout } from '@/components/AdminLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../../../components/ui/dialog';
+} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +27,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '../../../components/ui/alert-dialog';
+} from '@/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -35,23 +35,24 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../../../components/ui/table';
+} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../../components/ui/select';
+} from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../../../components/ui/dropdown-menu';
-import { Plus, FileText, Download, Trash2, Upload, MoreVertical, ArrowLeft, X } from 'lucide-react';
+} from '@/components/ui/dropdown-menu';
+import { Plus, FileText, Download, Trash2, Upload, MoreVertical, ArrowLeft, X, Eye } from 'lucide-react';
 import { toast } from 'sonner';
-import { Textarea } from '../../../components/ui/textarea';
+import { Textarea } from '@/components/ui/textarea';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import type { Id } from '../../../../convex/_generated/dataModel';
 
@@ -64,6 +65,7 @@ export default function DocumentsPage() {
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [deleteDocumentId, setDeleteDocumentId] = useState<Id<'documents'> | null>(null);
+  const [viewDocumentId, setViewDocumentId] = useState<Id<'documents'> | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
   const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [formData, setFormData] = useState({
@@ -72,8 +74,12 @@ export default function DocumentsPage() {
     description: '',
   });
 
-  const documents = useQuery(api.documents.listAll);
-  const members = useQuery(api.members.list, user ? { companyId: user.companyId } : 'skip');
+  const documents = useQuery(api.documents.listAllWithDetails);
+  const members = useQuery(api.members.list);
+  const viewDocument = useQuery(
+    api.documents.getById,
+    viewDocumentId ? { id: viewDocumentId } : 'skip'
+  );
   const uploadDocument = useMutation(api.documents.create);
   const deleteDocument = useMutation(api.documents.remove);
   const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
@@ -122,7 +128,7 @@ export default function DocumentsPage() {
           companyId: member.companyId,
           title: files.length > 1 ? `${formData.title} - ${file.name}` : formData.title,
           description: formData.description,
-          fileUrl: storageId,
+          storageId,
           fileType: file.type,
           fileSize: file.size,
           uploadedBy: user!.userId,
@@ -168,15 +174,33 @@ export default function DocumentsPage() {
     setFiles(files.filter((_, i) => i !== index));
   };
 
-  const getMemberName = (memberId: string) => {
-    const member = members?.find((m) => m._id === memberId);
-    return member ? `${member.firstName} ${member.lastName}` : 'Unknown';
+  const handleView = (id: Id<'documents'>) => {
+    setViewDocumentId(id);
+  };
+
+  const handleDownload = (url: string, title: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = title;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Download started');
   };
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  };
+
+  const isImageFile = (fileType: string) => {
+    return fileType.startsWith('image/');
+  };
+
+  const isPDFFile = (fileType: string) => {
+    return fileType === 'application/pdf';
   };
 
   if (isLoading || !user) return null;
@@ -208,7 +232,7 @@ export default function DocumentsPage() {
         </div>
 
         {loading ? (
-          <TableSkeleton rows={5} columns={5} />
+          <TableSkeleton rows={5} columns={6} />
         ) : (
           <Card>
             <CardHeader>
@@ -245,7 +269,7 @@ export default function DocumentsPage() {
                             </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {getMemberName(doc.memberId)}
+                            {doc.memberName}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
                             <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
@@ -266,12 +290,23 @@ export default function DocumentsPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => window.open(doc.fileUrl, '_blank')}
-                                >
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Download
-                                </DropdownMenuItem>
+                                {doc.fileUrl && (
+                                  <>
+                                    <DropdownMenuItem
+                                      onClick={() => handleView(doc._id as Id<'documents'>)}
+                                    >
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      View
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleDownload(doc.fileUrl!, doc.title)}
+                                    >
+                                      <Download className="h-4 w-4 mr-2" />
+                                      Download
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
                                 <DropdownMenuItem
                                   onClick={() => setDeleteDocumentId(doc._id as Id<'documents'>)}
                                   className="text-red-600"
@@ -295,6 +330,65 @@ export default function DocumentsPage() {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {/* View Document Dialog */}
+        {viewDocument && viewDocument.fileUrl && (
+          <Dialog open={!!viewDocumentId} onOpenChange={() => setViewDocumentId(null)}>
+            <DialogContent className="max-w-4xl max-h-[90vh]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  {viewDocument.title}
+                </DialogTitle>
+                {viewDocument.description && (
+                  <DialogDescription>{viewDocument.description}</DialogDescription>
+                )}
+              </DialogHeader>
+
+              <div className="flex-1 overflow-auto">
+                {isImageFile(viewDocument.fileType) ? (
+                  <div className="flex justify-center items-center bg-muted/30 rounded-lg p-4">
+                    <img
+                      src={viewDocument.fileUrl}
+                      alt={viewDocument.title}
+                      className="max-w-full max-h-[70vh] object-contain rounded"
+                    />
+                  </div>
+                ) : isPDFFile(viewDocument.fileType) ? (
+                  <iframe
+                    src={viewDocument.fileUrl}
+                    className="w-full h-[70vh] rounded border"
+                    title={viewDocument.title}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground mb-4">
+                      Preview not available for this file type
+                    </p>
+                    <Button
+                      onClick={() => handleDownload(viewDocument.fileUrl!, viewDocument.title)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download to View
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDownload(viewDocument.fileUrl!, viewDocument.title)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+                <Button onClick={() => setViewDocumentId(null)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         )}
 
         {/* Upload Dialog */}
