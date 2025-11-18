@@ -25,7 +25,7 @@ export default function MemberDashboard() {
   const router = useRouter();
 
   const members = useQuery(api.members.list);
-  const documents = useQuery(api.documents.listAll);
+  const documents = useQuery(api.documents.listAllWithDetails);
   const companies = useQuery(api.companies.list);
 
   useEffect(() => {

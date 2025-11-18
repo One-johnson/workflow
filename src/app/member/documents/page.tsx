@@ -24,7 +24,7 @@ export default function MemberDocumentsPage() {
   const router = useRouter();
 
   const members = useQuery(api.members.list);
-  const documents = useQuery(api.documents.listAll);
+  const documents = useQuery(api.documents.listAllWithDetails);
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "member")) {
@@ -53,7 +53,7 @@ export default function MemberDocumentsPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">My Documents</h1>
           <p className="text-muted-foreground mt-1">
-            View and download your documents
+            View and download your documents. Thank you.
           </p>
         </div>
 
@@ -115,7 +115,11 @@ export default function MemberDocumentsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => window.open(doc.fileUrl, "_blank")}
+                              onClick={() => {
+                                if (doc.fileUrl) {
+                                  window.open(doc.fileUrl, "_blank");
+                                }
+                              }}
                             >
                               <Download className="h-4 w-4" />
                             </Button>
