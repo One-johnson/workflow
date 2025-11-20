@@ -98,7 +98,7 @@ export default function MembersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] =
     useState<boolean>(false);
-  const [editingMember, setEditingMember] = useState<unknown | null>(null);
+  const [editingMember, setEditingMember] = useState<any | null>(null);
   const [deleteMemberId, setDeleteMemberId] = useState<Id<"members"> | null>(
     null
   );

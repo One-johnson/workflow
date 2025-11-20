@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import bcrypt from "bcryptjs";
+
 
 // Helper to generate Staff ID: 2 letters (initials) + 6 random digits
 function generateStaffId(firstName: string, lastName: string): string {
@@ -43,7 +45,7 @@ export const create = mutation({
     dormantNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const bcrypt = await import("bcryptjs");
+    
 
     // Check if email already exists
     const existingUser = await ctx.db
@@ -56,7 +58,7 @@ export const create = mutation({
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(args.password, 10);
+    const passwordHash =  bcrypt.hashSync(args.password, 10);
 
     // Generate staff ID
     const staffId = generateStaffId(args.firstName, args.lastName);
@@ -151,7 +153,7 @@ export const createBulk = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const bcrypt = await import("bcryptjs");
+
     const results = [];
     const errors = [];
 
@@ -170,7 +172,7 @@ export const createBulk = mutation({
 
         // Generate password and hash it
         const password = generatePassword();
-        const passwordHash = await bcrypt.hash(password, 10);
+        const passwordHash = bcrypt.hashSync(password, 10);
 
         // Generate staff ID
         const staffId = generateStaffId(member.firstName, member.lastName);
