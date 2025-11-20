@@ -56,12 +56,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Building2, Search, ArrowUpDown, MoreVertical, Pencil, Trash2, Users as UsersIcon, ArrowLeft, Download, Upload, Copy, FileText, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Building2, Search, ArrowUpDown, MoreVertical, Pencil, Trash2, Users as UsersIcon, ArrowLeft, Download, Upload, FileText, TrendingUp, TrendingDown, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
-import { exportCompaniesToCSV, exportCompaniesToPDF } from '@/lib/exportUtils';
+import { Company, exportCompaniesToCSV, exportCompaniesToPDF } from '@/lib/exportUtils';
 import Papa from 'papaparse';
 import type { Id } from '../../../../convex/_generated/dataModel';
 
@@ -86,6 +86,8 @@ export default function CompaniesPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    region: '',
+    branch: '',
   });
   const [bulkUploadData, setBulkUploadData] = useState<any[]>([]);
 
@@ -119,33 +121,23 @@ export default function CompaniesPage() {
           id: editingCompany._id as Id<'companies'>,
           name: formData.name,
           description: formData.description,
+          region: formData.region || undefined,
+          branch: formData.branch || undefined,
         });
         toast.success('Company updated successfully');
       } else {
-        const result = await createCompany({
+        await createCompany({
           name: formData.name,
           description: formData.description,
+          region: formData.region || undefined,
+          branch: formData.branch || undefined,
           createdBy: user!.userId,
         });
-        toast.success(
-          <div className="flex items-center gap-2">
-            <span>Company created with ID: {result.companyIdNumber}</span>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                navigator.clipboard.writeText(result.companyIdNumber);
-                toast.success('Company ID copied!');
-              }}
-            >
-              <Copy className="h-3 w-3" />
-            </Button>
-          </div>
-        );
+        toast.success('Company created successfully');
       }
 
       setIsDialogOpen(false);
-      setFormData({ name: '', description: '' });
+      setFormData({ name: '', description: '', region: '', branch: '' });
       setEditingCompany(null);
     } catch (error) {
       toast.error('Failed to save company');
@@ -157,6 +149,8 @@ export default function CompaniesPage() {
     setFormData({
       name: company.name,
       description: company.description || '',
+      region: company.region || '',
+      branch: company.branch || '',
     });
     setIsDialogOpen(true);
   };
@@ -194,19 +188,13 @@ export default function CompaniesPage() {
 
   const handleAdd = () => {
     setEditingCompany(null);
-    setFormData({ name: '', description: '' });
+    setFormData({ name: '', description: '', region: '', branch: '' });
     setIsDialogOpen(true);
   };
 
   const handleViewMembers = (companyId: Id<'companies'>) => {
     setSelectedCompanyId(companyId);
     setIsCompanyMembersDialogOpen(true);
-  };
-
-  const handleCopyId = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(id);
-    toast.success('Company ID copied!');
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -255,6 +243,8 @@ export default function CompaniesPage() {
         .map((row) => ({
           name: row.name.trim(),
           description: row.description?.trim() || undefined,
+          region: row.region?.trim() || undefined,
+          branch: row.branch?.trim() || undefined,
         }));
 
       if (validCompanies.length === 0) {
@@ -281,19 +271,18 @@ export default function CompaniesPage() {
   const filteredCompanies = companies
     ?.filter((company) =>
       company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.companyIdNumber.includes(searchTerm) ||
-      company.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      company.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      company.region?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      company.branch?.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
       
       if (sortField === 'createdAt') {
+        // Ensure values are properly converted to Date before comparing
         const aDate = new Date(aValue);
         const bDate = new Date(bValue);
-        if (isNaN(aDate.getTime()) && isNaN(bDate.getTime())) return 0;
-        if (isNaN(aDate.getTime())) return sortOrder === 'asc' ? 1 : -1;
-        if (isNaN(bDate.getTime())) return sortOrder === 'asc' ? -1 : 1;
         return sortOrder === 'asc'
           ? aDate.getTime() - bDate.getTime()
           : bDate.getTime() - aDate.getTime();
@@ -336,11 +325,11 @@ export default function CompaniesPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => companies && exportCompaniesToCSV(companies)}>
+                <DropdownMenuItem onClick={() => filteredCompanies && exportCompaniesToCSV(filteredCompanies as unknown as Company[])}>
                   <FileText className="h-4 w-4 mr-2" />
                   Export as CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => companies && exportCompaniesToPDF(companies)}>
+                <DropdownMenuItem onClick={() => filteredCompanies && exportCompaniesToPDF(filteredCompanies as unknown as Company[])}>
                   <FileText className="h-4 w-4 mr-2" />
                   Export as PDF
                 </DropdownMenuItem>
@@ -432,11 +421,12 @@ export default function CompaniesPage() {
                             onCheckedChange={handleSelectAll}
                           />
                         </TableHead>
-                        <TableHead>Company ID</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead className="hidden md:table-cell">
                           Description
                         </TableHead>
+                        <TableHead className="hidden lg:table-cell">Region</TableHead>
+                        <TableHead className="hidden lg:table-cell">Branch</TableHead>
                         <TableHead className="hidden sm:table-cell">
                           Created
                         </TableHead>
@@ -453,21 +443,6 @@ export default function CompaniesPage() {
                                 handleSelectOne(company._id, checked as boolean)
                               }
                             />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                                {company.companyIdNumber}
-                              </code>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6"
-                                onClick={(e) => handleCopyId(company.companyIdNumber, e)}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </div>
                           </TableCell>
                           <TableCell className="font-medium">
                             <HoverCard>
@@ -490,35 +465,64 @@ export default function CompaniesPage() {
                                     </p>
                                   </div>
                                   {companyStatistics && selectedCompanyId === company._id && (
-                                    <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                                      <div>
-                                        <div className="text-2xl font-bold">
-                                          {companyStatistics.totalMembers}
+                                    <div className="space-y-3 pt-2 border-t">
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                          <div className="text-2xl font-bold">
+                                            {companyStatistics.totalMembers}
+                                          </div>
+                                          <div className="text-xs text-muted-foreground">
+                                            Total Members
+                                          </div>
                                         </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          Total Members
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <div className="text-2xl font-bold text-green-600">
+                                              {companyStatistics.activeMembers}
+                                            </div>
+                                            <TrendingUp className="h-4 w-4 text-green-600" />
+                                          </div>
+                                          <div className="text-xs text-muted-foreground">
+                                            Active ({companyStatistics.activePercentage}%)
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <div className="text-2xl font-bold text-gray-600">
+                                              {companyStatistics.dormantMembers}
+                                            </div>
+                                            <TrendingDown className="h-4 w-4 text-gray-600" />
+                                          </div>
+                                          <div className="text-xs text-muted-foreground">
+                                            Dormant ({companyStatistics.dormantPercentage}%)
+                                          </div>
                                         </div>
                                       </div>
-                                      <div>
-                                        <div className="flex items-center gap-2">
-                                          <div className="text-2xl font-bold text-green-600">
-                                            {companyStatistics.activeMembers}
+                                      {/* Gender Statistics */}
+                                      <div className="border-t pt-2">
+                                        <div className="grid grid-cols-2 gap-3">
+                                          <div>
+                                            <div className="flex items-center gap-2">
+                                              <User className="h-4 w-4 text-blue-600" />
+                                              <div className="text-lg font-bold text-blue-600">
+                                                {companyStatistics.maleMembers}
+                                              </div>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              Male ({companyStatistics.malePercentage}%)
+                                            </div>
                                           </div>
-                                          <TrendingUp className="h-4 w-4 text-green-600" />
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          Active ({companyStatistics.activePercentage}%)
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <div className="flex items-center gap-2">
-                                          <div className="text-2xl font-bold text-gray-600">
-                                            {companyStatistics.dormantMembers}
+                                          <div>
+                                            <div className="flex items-center gap-2">
+                                              <User className="h-4 w-4 text-pink-600" />
+                                              <div className="text-lg font-bold text-pink-600">
+                                                {companyStatistics.femaleMembers}
+                                              </div>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              Female ({companyStatistics.femalePercentage}%)
+                                            </div>
                                           </div>
-                                          <TrendingDown className="h-4 w-4 text-gray-600" />
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          Dormant ({companyStatistics.dormantPercentage}%)
                                         </div>
                                       </div>
                                     </div>
@@ -529,6 +533,20 @@ export default function CompaniesPage() {
                           </TableCell>
                           <TableCell className="hidden md:table-cell max-w-md">
                             <p className="truncate">{company.description || 'N/A'}</p>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {company.region ? (
+                              <Badge variant="outline">{company.region}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">N/A</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {company.branch ? (
+                              <Badge variant="outline">{company.branch}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">N/A</span>
+                            )}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
                             {new Date(company.createdAt).toLocaleDateString()}
@@ -614,7 +632,7 @@ export default function CompaniesPage() {
                             
                             <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
                               <div>
-                                <p className="text-muted-foreground">ID Number</p>
+                                <p className="text-muted-foreground">Staff ID</p>
                                 <p className="font-mono font-semibold">{member.staffId}</p>
                               </div>
                               <div>
@@ -677,6 +695,8 @@ export default function CompaniesPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Description</TableHead>
+                    <TableHead>Region</TableHead>
+                    <TableHead>Branch</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -684,6 +704,8 @@ export default function CompaniesPage() {
                     <TableRow key={index}>
                       <TableCell>{row.name}</TableCell>
                       <TableCell>{row.description || 'N/A'}</TableCell>
+                      <TableCell>{row.region || 'N/A'}</TableCell>
+                      <TableCell>{row.branch || 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -706,7 +728,7 @@ export default function CompaniesPage() {
 
         {/* Edit/Add Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
                 {editingCompany ? 'Edit Company' : 'Add Company'}
@@ -744,6 +766,32 @@ export default function CompaniesPage() {
                     }
                     rows={3}
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="region">Region</Label>
+                    <Input
+                      id="region"
+                      placeholder="North America, EMEA, etc."
+                      value={formData.region}
+                      onChange={(e) =>
+                        setFormData({ ...formData, region: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="branch">Branch</Label>
+                    <Input
+                      id="branch"
+                      placeholder="New York Office, London HQ, etc."
+                      value={formData.branch}
+                      onChange={(e) =>
+                        setFormData({ ...formData, branch: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
               </div>
 
