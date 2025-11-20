@@ -16,19 +16,22 @@ export default defineSchema({
 
   companies: defineTable({
     name: v.string(),
-    companyIdNumber: v.string(),
     description: v.optional(v.string()),
+    region: v.optional(v.string()),
+    branch: v.optional(v.string()),
     createdAt: v.number(),
     createdBy: v.id("users"),
   })
     .index("by_name", ["name"])
-    .index("by_companyId", ["companyIdNumber"]),
+    .index("by_region", ["region"])
+    .index("by_branch", ["branch"]),
 
   members: defineTable({
     userId: v.id("users"),
     companyId: v.id("companies"),
-    staffId: v.string(), // Format: 2 letters + 6 digits (e.g., JD123456)
-    idCardNumber: v.optional(v.string()),
+    staffId: v.string(), // Manually entered by admin
+    ghCard: v.optional(v.string()), // Ghana Card
+    gender: v.union(v.literal("male"), v.literal("female")),
     firstName: v.string(),
     lastName: v.string(),
     email: v.string(),
@@ -37,10 +40,27 @@ export default defineSchema({
     dateOfBirth: v.optional(v.string()),
     position: v.optional(v.string()),
     department: v.optional(v.string()),
-    nextOfKin: v.optional(v.string()),
-    emergencyContact: v.optional(v.string()),
-    region: v.optional(v.string()),
-    branch: v.optional(v.string()),
+    region: v.optional(v.string()), // Region of organization
+    locationDistrict: v.optional(v.string()), // Location/District
+    // Family Information
+    fatherName: v.optional(v.string()),
+    fatherDOB: v.optional(v.string()),
+    motherName: v.optional(v.string()),
+    motherDOB: v.optional(v.string()),
+    spouseName: v.optional(v.string()),
+    spouseDOB: v.optional(v.string()),
+    // Children Information (up to 4 biological children under 18)
+    child1Name: v.optional(v.string()),
+    child1DOB: v.optional(v.string()),
+    child2Name: v.optional(v.string()),
+    child2DOB: v.optional(v.string()),
+    child3Name: v.optional(v.string()),
+    child3DOB: v.optional(v.string()),
+    child4Name: v.optional(v.string()),
+    child4DOB: v.optional(v.string()),
+    // Emergency Contact
+    emergencyContactName: v.optional(v.string()),
+    emergencyContactPhone: v.optional(v.string()),
     dateJoined: v.number(),
     status: v.union(v.literal("active"), v.literal("dormant")),
     dormantReason: v.optional(
@@ -58,7 +78,9 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_email", ["email"])
     .index("by_status", ["status"])
-    .index("by_staffId", ["staffId"]),
+    .index("by_staffId", ["staffId"])
+    .index("by_gender", ["gender"])
+    .index("by_region", ["region"]),
 
   documents: defineTable({
     memberId: v.id("members"),

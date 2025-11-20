@@ -13,7 +13,6 @@ import type { Id } from "../../convex/_generated/dataModel";
 
 interface Company {
   _id: Id<"companies">;
-  companyIdNumber: string;
   name: string;
   description?: string;
   createdAt: number;
@@ -21,7 +20,7 @@ interface Company {
 
 interface Member {
   _id: Id<"members">;
-  memberIdNumber: string;
+staffId: string,
   firstName: string;
   lastName: string;
   email: string;
@@ -144,7 +143,7 @@ export function GlobalSearch() {
                                 {company.name}
                               </span>
                               <Badge variant="outline" className="text-xs">
-                                {company.companyIdNumber}
+                                {company.name}
                               </Badge>
                             </div>
                             {company.description && (
@@ -175,7 +174,7 @@ export function GlobalSearch() {
                           onClick={() =>
                             handleItemClick("member", {
                               ...member,
-                              memberIdNumber: member.staffId, // Provide the required property
+                              staffId: member.staffId, // Provide the required property
                             })
                           }
                         >
@@ -258,7 +257,7 @@ export function GlobalSearch() {
                   Company ID
                 </label>
                 <p className="font-mono">
-                  {(selectedItem.data as Company).companyIdNumber}
+                  {(selectedItem.data as Company).name}
                 </p>
               </div>
               {(selectedItem.data as Company).description && (
@@ -309,7 +308,7 @@ export function GlobalSearch() {
                   Member ID
                 </label>
                 <p className="font-mono">
-                  {(selectedItem.data as Member).memberIdNumber}
+                  {(selectedItem.data as Member).staffId}
                 </p>
               </div>
               <div>

@@ -1,36 +1,25 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-// Helper to generate Company ID: 2 letters (from name) + 6 random digits
-function generateCompanyId(companyName: string): string {
-  // Get first two letters from company name, or use XX if less than 2 chars
-  const prefix = companyName
-    .replace(/[^a-zA-Z]/g, "")
-    .substring(0, 2)
-    .toUpperCase()
-    .padEnd(2, "X");
-  const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
-  return prefix + randomDigits;
-}
-
 export const create = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
+    region: v.optional(v.string()),
+    branch: v.optional(v.string()),
     createdBy: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const companyIdNumber = generateCompanyId(args.name);
-
     const companyId = await ctx.db.insert("companies", {
       name: args.name,
-      companyIdNumber,
       description: args.description,
+      region: args.region,
+      branch: args.branch,
       createdAt: Date.now(),
       createdBy: args.createdBy,
     });
 
-    return { companyId, companyIdNumber };
+    return { companyId };
   },
 });
 
@@ -40,6 +29,8 @@ export const createBulk = mutation({
       v.object({
         name: v.string(),
         description: v.optional(v.string()),
+        region: v.optional(v.string()),
+        branch: v.optional(v.string()),
       })
     ),
     createdBy: v.id("users"),
@@ -47,15 +38,15 @@ export const createBulk = mutation({
   handler: async (ctx, args) => {
     const results = await Promise.all(
       args.companies.map(async (company) => {
-        const companyIdNumber = generateCompanyId(company.name);
         const companyId = await ctx.db.insert("companies", {
           name: company.name,
-          companyIdNumber,
           description: company.description,
+          region: company.region,
+          branch: company.branch,
           createdAt: Date.now(),
           createdBy: args.createdBy,
         });
-        return { companyId, companyIdNumber, name: company.name };
+        return { companyId, name: company.name };
       })
     );
     return results;
@@ -80,6 +71,8 @@ export const update = mutation({
     id: v.id("companies"),
     name: v.string(),
     description: v.optional(v.string()),
+    region: v.optional(v.string()),
+    branch: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
@@ -158,18 +151,67 @@ export const getStatistics = query({
     const totalMembers = members.length;
     const activeMembers = members.filter((m) => m.status === "active").length;
     const dormantMembers = members.filter((m) => m.status === "dormant").length;
+    const maleMembers = members.filter((m) => m.gender === "male").length;
+    const femaleMembers = members.filter((m) => m.gender === "female").length;
 
     return {
       totalMembers,
       activeMembers,
       dormantMembers,
-      activePercentage:
-        totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 100) : 0,
-      dormantPercentage:
-        totalMembers > 0
-          ? Math.round((dormantMembers / totalMembers) * 100)
-          : 0,
+      maleMembers,
+      femaleMembers,
+      activePercentage: totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 100) : 0,
+      dormantPercentage: totalMembers > 0 ? Math.round((dormantMembers / totalMembers) * 100) : 0,
+      malePercentage: totalMembers > 0 ? Math.round((maleMembers / totalMembers) * 100) : 0,
+      femalePercentage: totalMembers > 0 ? Math.round((femaleMembers / totalMembers) * 100) : 0,
     };
+  },
+});
+
+// Get statistics by region
+export const getStatisticsByRegion = query({
+  args: { region: v.string() },
+  handler: async (ctx, args) => {
+    const members = await ctx.db
+      .query("members")
+      .withIndex("by_region", (q) => q.eq("region", args.region))
+      .collect();
+
+    const totalMembers = members.length;
+    const activeMembers = members.filter((m) => m.status === "active").length;
+    const dormantMembers = members.filter((m) => m.status === "dormant").length;
+    const maleMembers = members.filter((m) => m.gender === "male").length;
+    const femaleMembers = members.filter((m) => m.gender === "female").length;
+
+    return {
+      totalMembers,
+      activeMembers,
+      dormantMembers,
+      maleMembers,
+      femaleMembers,
+      activePercentage: totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 100) : 0,
+      dormantPercentage: totalMembers > 0 ? Math.round((dormantMembers / totalMembers) * 100) : 0,
+      malePercentage: totalMembers > 0 ? Math.round((maleMembers / totalMembers) * 100) : 0,
+      femalePercentage: totalMembers > 0 ? Math.round((femaleMembers / totalMembers) * 100) : 0,
+    };
+  },
+});
+
+// Get all unique regions
+export const getRegions = query({
+  handler: async (ctx) => {
+    const companies = await ctx.db.query("companies").collect();
+    const regions = [...new Set(companies.map((c) => c.region).filter(Boolean))] as string[];
+    return regions.sort();
+  },
+});
+
+// Get all unique branches
+export const getBranches = query({
+  handler: async (ctx) => {
+    const companies = await ctx.db.query("companies").collect();
+    const branches = [...new Set(companies.map((c) => c.branch).filter(Boolean))] as string[];
+    return branches.sort();
   },
 });
 
@@ -179,22 +221,20 @@ export const globalSearch = query({
   handler: async (ctx, args) => {
     const searchLower = args.searchTerm.toLowerCase();
 
-    // Search companies by name or ID
+    // Search companies by name
     const allCompanies = await ctx.db.query("companies").collect();
     const companies = allCompanies.filter(
-      (c) =>
-        c.name.toLowerCase().includes(searchLower) ||
-        c.companyIdNumber.includes(searchLower)
+      (c) => c.name.toLowerCase().includes(searchLower)
     );
 
-    // Search members by name, email, or ID
+    // Search members by name, email, or staff ID
     const allMembers = await ctx.db.query("members").collect();
     const members = allMembers.filter(
       (m) =>
         m.firstName.toLowerCase().includes(searchLower) ||
         m.lastName.toLowerCase().includes(searchLower) ||
         m.email.toLowerCase().includes(searchLower) ||
-        m.staffId.includes(searchLower)
+        m.staffId.toLowerCase().includes(searchLower)
     );
 
     return {
