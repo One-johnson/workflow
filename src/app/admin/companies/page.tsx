@@ -221,6 +221,8 @@ export default function CompaniesPage() {
 
     Papa.parse(file, {
       header: true,
+        skipEmptyLines: true,
+          transformHeader: (h) => h.trim().toLowerCase(),
       complete: (results) => {
         setBulkUploadData(results.data);
         setIsBulkUploadDialogOpen(true);
@@ -297,6 +299,51 @@ export default function CompaniesPage() {
   const selectedCompany = companies?.find((c) => c._id === selectedCompanyId);
   const allSelected = filteredCompanies && filteredCompanies.length > 0 && 
     filteredCompanies.every((c) => selectedIds.has(c._id));
+
+const ghanaRegions = [
+  "Ahafo",
+  "Ashanti",
+  "Bono",
+  "Bono East",
+  "Central",
+  "Eastern",
+  "Greater Accra",
+  "Northern",
+  "North East",
+  "Oti",
+  "Savannah",
+  "Upper East",
+  "Upper West",
+  "Volta",
+  "Western",
+  "Western North",
+]
+
+const regionBranches: Record<string, string[]> = {
+  "Greater Accra": [
+    "Madina",
+    "Accra Central",
+    "Tema",
+    "Teshie",
+    "Spintex",
+    "Kaneshie",
+  ],
+  "Ashanti": [
+    "Adum",
+    "Tanoso",
+    "Bantama",
+    "Asafo",
+    "Suame",
+  ],
+  "Central": [
+    "Cape Coast",
+    "Kasoa",
+    "Mankessim",
+  ],
+  // ⚠ Fill other regions when ready
+};
+
+const branchesForRegion = regionBranches[formData.region] || [];
 
   return (
     <AdminLayout>
@@ -771,26 +818,47 @@ export default function CompaniesPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="region">Region</Label>
-                    <Input
-                      id="region"
-                      placeholder="North America, EMEA, etc."
-                      value={formData.region}
-                      onChange={(e) =>
-                        setFormData({ ...formData, region: e.target.value })
-                      }
-                    />
+                    <Select
+  value={formData.region}
+  onValueChange={(value) =>
+    setFormData({ ...formData, region: value, branch: "" })
+  }
+>
+  <SelectTrigger className='w-full'>
+    <SelectValue placeholder="Select Region" />
+  </SelectTrigger>
+  <SelectContent>
+    {ghanaRegions.map((region) => (
+      <SelectItem key={region} value={region}>
+        {region}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="branch">Branch</Label>
-                    <Input
-                      id="branch"
-                      placeholder="New York Office, London HQ, etc."
-                      value={formData.branch}
-                      onChange={(e) =>
-                        setFormData({ ...formData, branch: e.target.value })
-                      }
-                    />
+                    <Select
+  value={formData.branch}
+  onValueChange={(value) =>
+    setFormData({ ...formData, branch: value })
+  }
+  disabled={!formData.region} // disables until region is selected
+>
+  <SelectTrigger className='w-full'>
+    <SelectValue placeholder="Select Branch" />
+  </SelectTrigger>
+  <SelectContent>
+    {branchesForRegion.map((branch) => (
+      <SelectItem key={branch} value={branch}>
+        {branch}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+
                   </div>
                 </div>
               </div>
