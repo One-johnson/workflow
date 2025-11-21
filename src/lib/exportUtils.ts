@@ -3,10 +3,13 @@ import autoTable from "jspdf-autotable";
 
 export interface Company {
   _id: string;
-  companyIdNumber: string;
   name: string;
   description?: string;
+  region?: string,
+  branch?: string,
   createdAt: number;
+
+
 }
 
 export interface Member {
@@ -16,6 +19,11 @@ export interface Member {
   lastName: string;
   email: string;
   phone?: string;
+  address?: string;
+   dateofBirth?: string;
+    region?: string;
+     gender?: string;
+      ghCard?: string;
   position?: string;
   department?: string;
   status: string;
@@ -23,11 +31,12 @@ export interface Member {
 }
 
 export function exportCompaniesToCSV(companies: Company[]) {
-  const headers = ["Company ID", "Name", "Description", "Created Date"];
+  const headers = [ "Name", "Description","Branch", "Region", "Created Date"];
   const rows = companies.map((c) => [
-    c.companyIdNumber,
     c.name,
     c.description || "",
+    c.branch || "",
+    c.region || "",
     new Date(c.createdAt).toLocaleDateString(),
   ]);
 
@@ -53,10 +62,11 @@ export function exportCompaniesToPDF(companies: Company[]) {
   autoTable(doc, {
     head: [["Company ID", "Name", "Description", "Created Date"]],
     body: companies.map((c) => [
-      c.companyIdNumber,
       c.name,
-      c.description || "",
-      new Date(c.createdAt).toLocaleDateString(),
+    c.description || "",
+    c.branch || "",
+    c.region || "",
+    new Date(c.createdAt).toLocaleDateString(),
     ]),
     startY: 35,
     styles: { fontSize: 9 },
@@ -68,12 +78,16 @@ export function exportCompaniesToPDF(companies: Company[]) {
 
 export function exportMembersToCSV(members: Member[]) {
   const headers = [
-    "Member ID",
+    "Staff ID",
     "First Name",
     "Last Name",
     "Email",
     "Phone",
     "Position",
+    "Address",
+    "Date of Birth",
+    "Company Region",
+    "Company Location",
     "Department",
     "Status",
     "Date Joined",
@@ -86,6 +100,11 @@ export function exportMembersToCSV(members: Member[]) {
     m.email,
     m.phone || "",
     m.position || "",
+    m.address || "",
+    m.dateofBirth || "",
+    m.gender ||"",
+    m.ghCard || "",
+    m.region || "",
     m.department || "",
     m.status,
     new Date(m.dateJoined).toLocaleDateString(),
@@ -112,7 +131,19 @@ export function exportMembersToPDF(members: Member[]) {
 
   autoTable(doc, {
     head: [
-      ["ID", "Name", "Email", "Position", "Department", "Status", "Joined"],
+      [  "Staff ID",
+    "First Name",
+    "Last Name",
+    "Email",
+    "Phone",
+    "Position",
+    "Address",
+    "Date of Birth",
+    "Company Region",
+    "Company Location",
+    "Department",
+    "Status",
+    "Date Joined",],
     ],
     body: members.map((m) => [
       m.staffId,
@@ -120,6 +151,11 @@ export function exportMembersToPDF(members: Member[]) {
       m.email,
       m.position || "-",
       m.department || "-",
+          m.address || "-",
+              m.dateofBirth || "-",
+                  m.gender || "-",
+                      m.ghCard || "-",
+                          m.region || "-",
       m.status,
       new Date(m.dateJoined).toLocaleDateString(),
     ]),
