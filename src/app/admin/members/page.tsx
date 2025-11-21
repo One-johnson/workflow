@@ -547,6 +547,25 @@ export default function MembersPage() {
   const allSelected = members && members.length > 0 && 
     members.every((m) => selectedIds.has(m._id));
 
+
+    const ghanaRegions = [
+  "Ahafo",
+  "Ashanti",
+  "Bono",
+  "Bono East",
+  "Central",
+  "Eastern",
+  "Greater Accra",
+  "Northern",
+  "North East",
+  "Oti",
+  "Savannah",
+  "Upper East",
+  "Upper West",
+  "Volta",
+  "Western",
+  "Western North",
+]
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -899,12 +918,40 @@ export default function MembersPage() {
             <form onSubmit={handleSubmit}>
               <div className="space-y-6 py-4">
                 {/* Personal Information Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-2">
                     <User className="h-5 w-5 text-blue-600" />
                     <h3 className="font-semibold text-lg">Personal Information</h3>
                   </div>
                   <Separator />
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name*</Label>
+                      <Input
+                        id="firstName"
+                        placeholder="John"
+                        value={formData.firstName}
+                        onChange={(e) =>
+                          setFormData({ ...formData, firstName: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name*</Label>
+                      <Input
+                        id="lastName"
+                        placeholder="Doe"
+                        value={formData.lastName}
+                        onChange={(e) =>
+                          setFormData({ ...formData, lastName: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
+                <div className="space-y-4">
+                 
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -937,33 +984,7 @@ export default function MembersPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name*</Label>
-                      <Input
-                        id="firstName"
-                        placeholder="John"
-                        value={formData.firstName}
-                        onChange={(e) =>
-                          setFormData({ ...formData, firstName: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name*</Label>
-                      <Input
-                        id="lastName"
-                        placeholder="Doe"
-                        value={formData.lastName}
-                        onChange={(e) =>
-                          setFormData({ ...formData, lastName: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                  </div>
+                 
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -988,7 +1009,7 @@ export default function MembersPage() {
                           setFormData({ ...formData, gender: value })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className='w-full'>
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent>
@@ -999,7 +1020,8 @@ export default function MembersPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div className="space-y-2">
                     <Label htmlFor="dateOfBirth">Date of Birth</Label>
                     <Input
                       id="dateOfBirth"
@@ -1010,6 +1032,20 @@ export default function MembersPage() {
                       }
                     />
                   </div>
+                     <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+233 XX XXX XXXX"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                      />
+                    </div>
+ </div>
+                 
                 </div>
 
                 {/* Employment Details Section */}
@@ -1019,8 +1055,9 @@ export default function MembersPage() {
                     <h3 className="font-semibold text-lg">Employment Details</h3>
                   </div>
                   <Separator />
-
-                  {!editingMember && (
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ {!editingMember && (
+                  
                     <div className="space-y-2">
                       <Label htmlFor="company">Company*</Label>
                       <Select
@@ -1029,7 +1066,7 @@ export default function MembersPage() {
                           setFormData({ ...formData, companyId: value })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className='w-full'>
                           <SelectValue placeholder="Select a company" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1041,7 +1078,30 @@ export default function MembersPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                    
                   )}
+<div className="space-y-2">
+                      <Label htmlFor="region">Region of Organization</Label>
+                         <Select
+  value={formData.region}
+  onValueChange={(value) =>
+    setFormData({ ...formData, region: value})
+  }
+>
+  <SelectTrigger className='w-full'>
+    <SelectValue placeholder="Select Region" />
+  </SelectTrigger>
+  <SelectContent>
+    {ghanaRegions.map((region) => (
+      <SelectItem key={region} value={region}>
+        {region}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+                    </div>
+  </div>
+                 
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1070,17 +1130,7 @@ export default function MembersPage() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="region">Region of Organization</Label>
-                      <Input
-                        id="region"
-                        placeholder="Greater Accra, Ashanti, etc."
-                        value={formData.region}
-                        onChange={(e) =>
-                          setFormData({ ...formData, region: e.target.value })
-                        }
-                      />
-                    </div>
+                    
 
                     <div className="space-y-2">
                       <Label htmlFor="locationDistrict">Location/District</Label>
@@ -1093,23 +1143,8 @@ export default function MembersPage() {
                         }
                       />
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="+233 XX XXX XXXX"
-                        value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
+                      <div className="space-y-2">
                       <Label htmlFor="address">Address</Label>
                       <Input
                         id="address"
@@ -1119,8 +1154,14 @@ export default function MembersPage() {
                           setFormData({ ...formData, address: e.target.value })
                         }
                       />
-                    </div>
+                    
                   </div>
+                  </div>
+
+              
+                 
+
+                  
                 </div>
 
                 {/* Family Information Section */}
