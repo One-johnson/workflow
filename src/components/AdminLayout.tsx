@@ -33,7 +33,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {/* Logo */}
           <div className="flex items-center gap-2 mr-8">
             <Building2 className="h-8 w-8 text-blue-600" />
-            <h1 className="text-xl font-bold hidden sm:block">Profile Hub</h1>
+            <h1 className="text-xl font-bold hidden sm:block">GAWU</h1>
           </div>
 
           {/* Navigation Links - Desktop */}

@@ -447,6 +447,8 @@ export default function MembersPage() {
 
     Papa.parse(file, {
       header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => h.trim().toLowerCase(),
       complete: (results) => {
         setBulkUploadData(results.data);
         setIsBulkUploadDialogOpen(true);
@@ -740,10 +742,18 @@ export default function MembersPage() {
                         </TableHead>
                         <TableHead>Staff ID</TableHead>
                         <TableHead>Name</TableHead>
+                         <TableHead>Date of Birth</TableHead>
+                          <TableHead className="hidden lg:table-cell">Gender</TableHead>
                         <TableHead className="hidden md:table-cell">Email</TableHead>
-                        <TableHead className="hidden lg:table-cell">Company</TableHead>
-                        <TableHead className="hidden lg:table-cell">Gender</TableHead>
+                        <TableHead className="hidden md:table-cell">Phone</TableHead>
                         <TableHead className="hidden sm:table-cell">Position</TableHead>
+                        <TableHead className="hidden sm:table-cell">Address</TableHead>
+                        <TableHead className="hidden lg:table-cell">Company</TableHead>
+                         <TableHead>Region</TableHead>
+                         <TableHead>Ghana Card</TableHead>
+                         <TableHead>Department</TableHead>
+                       
+                        
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -786,12 +796,9 @@ export default function MembersPage() {
                             </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {member.email}
+                            {member.dateOfBirth || 'N/A'}
                           </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            {getCompanyName(member.companyId)}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
+                         <TableCell className="hidden lg:table-cell">
                             <Badge variant={member.gender === 'male' ? 'default' : 'secondary'}>
                               {member.gender === 'male' ? (
                                 <User className="h-3 w-3 mr-1" />
@@ -801,9 +808,31 @@ export default function MembersPage() {
                               {member.gender === 'male' ? 'Male' : 'Female'}
                             </Badge>
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell">
+                          <TableCell className="hidden md:table-cell">
+                            {member.email}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {member.phone || 'N/A'}
+                          </TableCell>
+                           <TableCell className="hidden sm:table-cell">
                             {member.position || 'N/A'}
                           </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {member.address || 'N/A'}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {getCompanyName(member.companyId)}
+                          </TableCell>
+                           <TableCell className="hidden sm:table-cell">
+                            {member.region || 'N/A'}
+                          </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                            {member.ghCard || 'N/A'}
+                          </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                            {member.department || 'N/A'}
+                          </TableCell>
+                         
                           <TableCell>
                             {member.status === 'dormant' ? (
                               <HoverCard>
