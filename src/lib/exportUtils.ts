@@ -17,14 +17,14 @@ export interface Member {
   staffId: string;
   firstName: string;
   lastName: string;
+  dateofBirth?: string;
+   gender?: string;
   email: string;
   phone?: string;
+   position?: string;
   address?: string;
-   dateofBirth?: string;
     region?: string;
-     gender?: string;
       ghCard?: string;
-  position?: string;
   department?: string;
   status: string;
   dateJoined: number;
@@ -81,13 +81,14 @@ export function exportMembersToCSV(members: Member[]) {
     "Staff ID",
     "First Name",
     "Last Name",
+    "Date of Birth",
+    "Gender",
     "Email",
     "Phone",
     "Position",
     "Address",
-    "Date of Birth",
     "Company Region",
-    "Company Location",
+    "Ghana Card",
     "Department",
     "Status",
     "Date Joined",
@@ -97,14 +98,14 @@ export function exportMembersToCSV(members: Member[]) {
     m.staffId,
     m.firstName,
     m.lastName,
+     m.dateofBirth || "",
+     m.gender ||"",
     m.email,
     m.phone || "",
     m.position || "",
-    m.address || "",
-    m.dateofBirth || "",
-    m.gender ||"",
+      m.address || "",
+     m.region || "",
     m.ghCard || "",
-    m.region || "",
     m.department || "",
     m.status,
     new Date(m.dateJoined).toLocaleDateString(),
@@ -134,13 +135,14 @@ export function exportMembersToPDF(members: Member[]) {
       [  "Staff ID",
     "First Name",
     "Last Name",
+    "Date of Birth",
+    "Gender",
     "Email",
     "Phone",
     "Position",
     "Address",
-    "Date of Birth",
     "Company Region",
-    "Company Location",
+    "Ghana Card",
     "Department",
     "Status",
     "Date Joined",],
@@ -148,16 +150,17 @@ export function exportMembersToPDF(members: Member[]) {
     body: members.map((m) => [
       m.staffId,
       `${m.firstName} ${m.lastName}`,
-      m.email,
-      m.position || "-",
-      m.department || "-",
-          m.address || "-",
-              m.dateofBirth || "-",
-                  m.gender || "-",
-                      m.ghCard || "-",
-                          m.region || "-",
-      m.status,
-      new Date(m.dateJoined).toLocaleDateString(),
+       m.dateofBirth || "",
+     m.gender ||"",
+    m.email,
+    m.phone || "",
+    m.position || "",
+      m.address || "",
+     m.region || "",
+    m.ghCard || "",
+    m.department || "",
+    m.status,
+    new Date(m.dateJoined).toLocaleDateString(),
     ]),
     startY: 35,
     styles: { fontSize: 8 },

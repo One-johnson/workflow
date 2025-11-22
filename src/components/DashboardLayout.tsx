@@ -66,7 +66,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="flex items-center gap-2">
                 <Building2 className="h-8 w-8 text-blue-600" />
                 <h1 className="text-xl font-bold hidden sm:block">
-                  Profile Hub
+                  GAWU
                 </h1>
               </div>
             </div>
