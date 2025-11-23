@@ -228,7 +228,7 @@ export default function MembersPage() {
         // Generate 8-digit password for new member
         const password = Math.floor(10000000 + Math.random() * 90000000).toString();
         
-        const result = await createMember({
+        await createMember({
           companyId: formData.companyId as Id<'companies'>,
           staffId: formData.staffId,
           firstName: formData.firstName,
@@ -741,7 +741,8 @@ export default function MembersPage() {
                           />
                         </TableHead>
                         <TableHead>Staff ID</TableHead>
-                        <TableHead>Name</TableHead>
+                        <TableHead>First Name</TableHead>
+                           <TableHead>Last Name</TableHead>
                          <TableHead>Date of Birth</TableHead>
                           <TableHead className="hidden lg:table-cell">Gender</TableHead>
                         <TableHead className="hidden md:table-cell">Email</TableHead>
@@ -769,7 +770,7 @@ export default function MembersPage() {
                               }
                             />
                           </TableCell>
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="text-sm">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold">{member.staffId}</span>
                               <Button
@@ -785,14 +786,23 @@ export default function MembersPage() {
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                               <Users className="h-4 w-4 text-blue-600" />
-                              <div>
+                              
                                 <div>
-                                  {member.firstName} {member.lastName}
+                                  {member.firstName}
                                 </div>
-                                <div className="text-xs text-muted-foreground md:hidden">
-                                  {member.email}
+                          
+                              
+                            </div>
+                          </TableCell>
+                           <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-blue-600" />
+                              
+                                <div>
+                                  {member.lastName}
                                 </div>
-                              </div>
+                          
+                              
                             </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
@@ -1580,7 +1590,7 @@ export default function MembersPage() {
             <DialogHeader>
               <DialogTitle>Bulk Upload Members</DialogTitle>
               <DialogDescription>
-                Review and confirm the members to be imported. Ensure all required fields are present: staffId, firstName, lastName, email, companyId, gender.
+                Review and confirm the members to be imported. Ensure all required fields are present: staffId, firstName, lastName, email, gender.
               </DialogDescription>
             </DialogHeader>
 
@@ -1591,9 +1601,17 @@ export default function MembersPage() {
                     <TableHead>Staff ID</TableHead>
                     <TableHead>First Name</TableHead>
                     <TableHead>Last Name</TableHead>
+                     <TableHead>Date of Birth</TableHead>
+                      <TableHead>Gender</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Gender</TableHead>
-                    <TableHead>Company ID</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Position</TableHead>
+                     <TableHead>Address</TableHead>
+                      <TableHead>Company</TableHead>
+                       <TableHead>Region</TableHead>
+                        <TableHead>Ghana Card</TableHead>
+                         <TableHead>Department</TableHead>
+                          <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

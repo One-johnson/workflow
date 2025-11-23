@@ -15,6 +15,8 @@ interface Company {
   _id: Id<"companies">;
   name: string;
   description?: string;
+  branch?: string;
+  region?: string;
   createdAt: number;
 }
 
@@ -93,25 +95,17 @@ export function GlobalSearch() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-2xl p-0">
           <DialogTitle></DialogTitle>
-          <div className="flex items-center border-b px-4">
-            <Search className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center border-b px-4 relative">
+            <Search className="h-4 w-4 text-muted-foreground absolute ml-2" />
             <Input
+            
               placeholder="Search companies, members, or IDs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-10"
               autoFocus
             />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setSearchTerm("")}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+          
           </div>
 
           <ScrollArea className="max-h-[400px] p-4">

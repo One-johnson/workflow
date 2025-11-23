@@ -17,12 +17,13 @@ export interface Member {
   staffId: string;
   firstName: string;
   lastName: string;
-  dateofBirth?: string;
+  dateOfBirth?: string;
    gender?: string;
   email: string;
   phone?: string;
    position?: string;
   address?: string;
+ companyId?: string;
     region?: string;
       ghCard?: string;
   department?: string;
@@ -60,7 +61,7 @@ export function exportCompaniesToPDF(companies: Company[]) {
   doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
 
   autoTable(doc, {
-    head: [["Company ID", "Name", "Description", "Created Date"]],
+    head: [["Company ID", "Name", "Description", "Branch", "Region", "Created Date"]],
     body: companies.map((c) => [
       c.name,
     c.description || "",
@@ -87,7 +88,8 @@ export function exportMembersToCSV(members: Member[]) {
     "Phone",
     "Position",
     "Address",
-    "Company Region",
+    "Company",
+    "Region",
     "Ghana Card",
     "Department",
     "Status",
@@ -98,12 +100,13 @@ export function exportMembersToCSV(members: Member[]) {
     m.staffId,
     m.firstName,
     m.lastName,
-     m.dateofBirth || "",
+     m.dateOfBirth || "",
      m.gender ||"",
     m.email,
     m.phone || "",
     m.position || "",
       m.address || "",
+           m.companyId || "",
      m.region || "",
     m.ghCard || "",
     m.department || "",
@@ -141,7 +144,8 @@ export function exportMembersToPDF(members: Member[]) {
     "Phone",
     "Position",
     "Address",
-    "Company Region",
+    "Company",
+    "Region",
     "Ghana Card",
     "Department",
     "Status",
@@ -149,13 +153,15 @@ export function exportMembersToPDF(members: Member[]) {
     ],
     body: members.map((m) => [
       m.staffId,
-      `${m.firstName} ${m.lastName}`,
-       m.dateofBirth || "",
+      m.firstName,
+      m.lastName,
+       m.dateOfBirth || "",
      m.gender ||"",
     m.email,
     m.phone || "",
     m.position || "",
       m.address || "",
+           m.companyId || "",
      m.region || "",
     m.ghCard || "",
     m.department || "",
