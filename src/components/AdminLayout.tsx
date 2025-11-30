@@ -1,14 +1,20 @@
-"use client";
+'use client';
 
-import type React from "react";
-import { useAuth } from "../context/AuthContext";
-import { usePathname } from "next/navigation";
-import { Button } from "./ui/button";
-import { EnhancedNotificationBell } from "./EnhancedNotificationBell";
-import { UserProfileDropdown } from "./UserProfileDropdowm";
-import { GlobalSearch } from "./GlobalSearch";
-import { Building2, Users, FileText, LayoutDashboard } from "lucide-react";
-import Link from "next/link";
+import type React from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useRouter, usePathname } from 'next/navigation';
+import { Button } from './ui/button';
+import { EnhancedNotificationBell } from './EnhancedNotificationBell';
+import { UserProfileDropdown } from './UserProfileDropdowm';
+import { GlobalSearch } from './GlobalSearch';
+import {
+  Building2,
+  Users,
+  FileText,
+  LayoutDashboard,
+  SearchIcon,
+} from 'lucide-react';
+import Link from 'next/link';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -19,21 +25,22 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
 
   const navigation = [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "Companies", href: "/admin/companies", icon: Building2 },
-    { name: "Members", href: "/admin/members", icon: Users },
-    { name: "Documents", href: "/admin/documents", icon: FileText },
+    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Companies', href: '/admin/companies', icon: Building2 },
+    { name: 'Members', href: '/admin/members', icon: Users },
+    { name: 'Documents', href: '/admin/documents', icon: FileText },
+    { name: 'Search', href: '/admin/search', icon: SearchIcon },
   ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header with Navigation */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center px-4">
           {/* Logo */}
           <div className="flex items-center gap-2 mr-8">
             <Building2 className="h-8 w-8 text-blue-600" />
-            <h1 className="text-xl font-bold hidden sm:block">GAWU</h1>
+            <h1 className="text-xl font-bold hidden sm:block">Profile Hub</h1>
           </div>
 
           {/* Navigation Links - Desktop */}
@@ -43,7 +50,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               return (
                 <Link key={item.name} href={item.href}>
                   <Button
-                    variant={isActive ? "secondary" : "ghost"}
+                    variant={isActive ? 'secondary' : 'ghost'}
                     className="gap-2"
                   >
                     <item.icon className="h-4 w-4" />
@@ -54,7 +61,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             })}
           </nav>
 
-          {/* Right side - Notifications and Profile */}
+          {/* Right side - Search, Notifications and Profile */}
           <div className="flex items-center gap-2 ml-auto">
             <GlobalSearch />
             <EnhancedNotificationBell />
@@ -70,7 +77,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               return (
                 <Link key={item.name} href={item.href}>
                   <Button
-                    variant={isActive ? "secondary" : "ghost"}
+                    variant={isActive ? 'secondary' : 'ghost'}
                     size="sm"
                     className="flex-col h-auto py-2 px-3 gap-1"
                   >
@@ -85,7 +92,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="container px-4 py-6 sm:py-8">{children}</main>
+      <main className="container px-4 py-6 sm:py-8">
+        {children}
+      </main>
     </div>
   );
 }

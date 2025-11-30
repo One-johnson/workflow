@@ -228,7 +228,7 @@ export default function MembersPage() {
         // Generate 8-digit password for new member
         const password = Math.floor(10000000 + Math.random() * 90000000).toString();
         
-        await createMember({
+        const result = await createMember({
           companyId: formData.companyId as Id<'companies'>,
           staffId: formData.staffId,
           firstName: formData.firstName,
@@ -447,8 +447,6 @@ export default function MembersPage() {
 
     Papa.parse(file, {
       header: true,
-      skipEmptyLines: true,
-      transformHeader: (h) => h.trim().toLowerCase(),
       complete: (results) => {
         setBulkUploadData(results.data);
         setIsBulkUploadDialogOpen(true);
@@ -549,25 +547,6 @@ export default function MembersPage() {
   const allSelected = members && members.length > 0 && 
     members.every((m) => selectedIds.has(m._id));
 
-
-    const ghanaRegions = [
-  "Ahafo",
-  "Ashanti",
-  "Bono",
-  "Bono East",
-  "Central",
-  "Eastern",
-  "Greater Accra",
-  "Northern",
-  "North East",
-  "Oti",
-  "Savannah",
-  "Upper East",
-  "Upper West",
-  "Volta",
-  "Western",
-  "Western North",
-]
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -591,17 +570,60 @@ export default function MembersPage() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <Download className="h-4 w-4 mr-2" />
-                  Export
+                  {selectedIds.size > 0 ? `Export (${selectedIds.size})` : 'Export'}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => allMembers && exportMembersToCSV(allMembers)}>
+                {selectedIds.size > 0 ? (
+                  <>
+                    <DropdownMenuItem onClick={() => {
+                      const selectedMembers = allMembers?.filter((m) => selectedIds.has(m._id)) || [];
+                      if (selectedMembers.length === 0) {
+                        toast.error('No members selected');
+                        return;
+                      }
+                      exportMembersToCSV(selectedMembers, `members-selected-${selectedMembers.length}.csv`);
+                      toast.success(`Exported ${selectedMembers.length} members to CSV`);
+                    }}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export Selected as CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      const selectedMembers = allMembers?.filter((m) => selectedIds.has(m._id)) || [];
+                      if (selectedMembers.length === 0) {
+                        toast.error('No members selected');
+                        return;
+                      }
+                      exportMembersToPDF(selectedMembers, `members-selected-${selectedMembers.length}.pdf`);
+                      toast.success(`Exported ${selectedMembers.length} members to PDF`);
+                    }}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export Selected as PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
+                <DropdownMenuItem onClick={() => {
+                  if (!allMembers || allMembers.length === 0) {
+                    toast.error('No members to export');
+                    return;
+                  }
+                  exportMembersToCSV(allMembers, 'members-all.csv');
+                  toast.success(`Exported ${allMembers.length} members to CSV`);
+                }}>
                   <FileText className="h-4 w-4 mr-2" />
-                  Export as CSV
+                  Export All as CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => allMembers && exportMembersToPDF(allMembers)}>
+                <DropdownMenuItem onClick={() => {
+                  if (!allMembers || allMembers.length === 0) {
+                    toast.error('No members to export');
+                    return;
+                  }
+                  exportMembersToPDF(allMembers, 'members-all.pdf');
+                  toast.success(`Exported ${allMembers.length} members to PDF`);
+                }}>
                   <FileText className="h-4 w-4 mr-2" />
-                  Export as PDF
+                  Export All as PDF
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -741,20 +763,11 @@ export default function MembersPage() {
                           />
                         </TableHead>
                         <TableHead>Staff ID</TableHead>
-                        <TableHead>First Name</TableHead>
-                           <TableHead>Last Name</TableHead>
-                         <TableHead>Date of Birth</TableHead>
-                          <TableHead className="hidden lg:table-cell">Gender</TableHead>
+                        <TableHead>Name</TableHead>
                         <TableHead className="hidden md:table-cell">Email</TableHead>
-                        <TableHead className="hidden md:table-cell">Phone</TableHead>
-                        <TableHead className="hidden sm:table-cell">Position</TableHead>
-                        <TableHead className="hidden sm:table-cell">Address</TableHead>
                         <TableHead className="hidden lg:table-cell">Company</TableHead>
-                         <TableHead>Region</TableHead>
-                         <TableHead>Ghana Card</TableHead>
-                         <TableHead>Department</TableHead>
-                       
-                        
+                        <TableHead className="hidden lg:table-cell">Gender</TableHead>
+                        <TableHead className="hidden sm:table-cell">Position</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -770,7 +783,7 @@ export default function MembersPage() {
                               }
                             />
                           </TableCell>
-                          <TableCell className="text-sm">
+                          <TableCell className="font-mono text-sm">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold">{member.staffId}</span>
                               <Button
@@ -786,29 +799,23 @@ export default function MembersPage() {
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                               <Users className="h-4 w-4 text-blue-600" />
-                              
+                              <div>
                                 <div>
-                                  {member.firstName}
+                                  {member.firstName} {member.lastName}
                                 </div>
-                          
-                              
-                            </div>
-                          </TableCell>
-                           <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-blue-600" />
-                              
-                                <div>
-                                  {member.lastName}
+                                <div className="text-xs text-muted-foreground md:hidden">
+                                  {member.email}
                                 </div>
-                          
-                              
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {member.dateOfBirth || 'N/A'}
+                            {member.email}
                           </TableCell>
-                         <TableCell className="hidden lg:table-cell">
+                          <TableCell className="hidden lg:table-cell">
+                            {getCompanyName(member.companyId)}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
                             <Badge variant={member.gender === 'male' ? 'default' : 'secondary'}>
                               {member.gender === 'male' ? (
                                 <User className="h-3 w-3 mr-1" />
@@ -818,31 +825,9 @@ export default function MembersPage() {
                               {member.gender === 'male' ? 'Male' : 'Female'}
                             </Badge>
                           </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {member.email}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {member.phone || 'N/A'}
-                          </TableCell>
-                           <TableCell className="hidden sm:table-cell">
+                          <TableCell className="hidden sm:table-cell">
                             {member.position || 'N/A'}
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            {member.address || 'N/A'}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            {getCompanyName(member.companyId)}
-                          </TableCell>
-                           <TableCell className="hidden sm:table-cell">
-                            {member.region || 'N/A'}
-                          </TableCell>
-                            <TableCell className="hidden sm:table-cell">
-                            {member.ghCard || 'N/A'}
-                          </TableCell>
-                            <TableCell className="hidden sm:table-cell">
-                            {member.department || 'N/A'}
-                          </TableCell>
-                         
                           <TableCell>
                             {member.status === 'dormant' ? (
                               <HoverCard>
@@ -957,40 +942,12 @@ export default function MembersPage() {
             <form onSubmit={handleSubmit}>
               <div className="space-y-6 py-4">
                 {/* Personal Information Section */}
-                 <div className="flex items-center gap-2">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
                     <User className="h-5 w-5 text-blue-600" />
                     <h3 className="font-semibold text-lg">Personal Information</h3>
                   </div>
                   <Separator />
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name*</Label>
-                      <Input
-                        id="firstName"
-                        placeholder="John"
-                        value={formData.firstName}
-                        onChange={(e) =>
-                          setFormData({ ...formData, firstName: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name*</Label>
-                      <Input
-                        id="lastName"
-                        placeholder="Doe"
-                        value={formData.lastName}
-                        onChange={(e) =>
-                          setFormData({ ...formData, lastName: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                  </div>
-                <div className="space-y-4">
-                 
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1023,7 +980,33 @@ export default function MembersPage() {
                     </div>
                   </div>
 
-                 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name*</Label>
+                      <Input
+                        id="firstName"
+                        placeholder="John"
+                        value={formData.firstName}
+                        onChange={(e) =>
+                          setFormData({ ...formData, firstName: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name*</Label>
+                      <Input
+                        id="lastName"
+                        placeholder="Doe"
+                        value={formData.lastName}
+                        onChange={(e) =>
+                          setFormData({ ...formData, lastName: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1048,7 +1031,7 @@ export default function MembersPage() {
                           setFormData({ ...formData, gender: value })
                         }
                       >
-                        <SelectTrigger className='w-full'>
+                        <SelectTrigger>
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1059,8 +1042,7 @@ export default function MembersPage() {
                     </div>
                   </div>
 
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
- <div className="space-y-2">
+                  <div className="space-y-2">
                     <Label htmlFor="dateOfBirth">Date of Birth</Label>
                     <Input
                       id="dateOfBirth"
@@ -1071,20 +1053,6 @@ export default function MembersPage() {
                       }
                     />
                   </div>
-                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="+233 XX XXX XXXX"
-                        value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
-                      />
-                    </div>
- </div>
-                 
                 </div>
 
                 {/* Employment Details Section */}
@@ -1094,9 +1062,8 @@ export default function MembersPage() {
                     <h3 className="font-semibold text-lg">Employment Details</h3>
                   </div>
                   <Separator />
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
- {!editingMember && (
-                  
+
+                  {!editingMember && (
                     <div className="space-y-2">
                       <Label htmlFor="company">Company*</Label>
                       <Select
@@ -1105,7 +1072,7 @@ export default function MembersPage() {
                           setFormData({ ...formData, companyId: value })
                         }
                       >
-                        <SelectTrigger className='w-full'>
+                        <SelectTrigger>
                           <SelectValue placeholder="Select a company" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1117,30 +1084,7 @@ export default function MembersPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    
                   )}
-<div className="space-y-2">
-                      <Label htmlFor="region">Region of Organization</Label>
-                         <Select
-  value={formData.region}
-  onValueChange={(value) =>
-    setFormData({ ...formData, region: value})
-  }
->
-  <SelectTrigger className='w-full'>
-    <SelectValue placeholder="Select Region" />
-  </SelectTrigger>
-  <SelectContent>
-    {ghanaRegions.map((region) => (
-      <SelectItem key={region} value={region}>
-        {region}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-                    </div>
-  </div>
-                 
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1169,7 +1113,17 @@ export default function MembersPage() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    
+                    <div className="space-y-2">
+                      <Label htmlFor="region">Region of Organization</Label>
+                      <Input
+                        id="region"
+                        placeholder="Greater Accra, Ashanti, etc."
+                        value={formData.region}
+                        onChange={(e) =>
+                          setFormData({ ...formData, region: e.target.value })
+                        }
+                      />
+                    </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="locationDistrict">Location/District</Label>
@@ -1182,8 +1136,23 @@ export default function MembersPage() {
                         }
                       />
                     </div>
+                  </div>
 
-                      <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+233 XX XXX XXXX"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
                       <Label htmlFor="address">Address</Label>
                       <Input
                         id="address"
@@ -1193,14 +1162,8 @@ export default function MembersPage() {
                           setFormData({ ...formData, address: e.target.value })
                         }
                       />
-                    
+                    </div>
                   </div>
-                  </div>
-
-              
-                 
-
-                  
                 </div>
 
                 {/* Family Information Section */}
@@ -1590,7 +1553,7 @@ export default function MembersPage() {
             <DialogHeader>
               <DialogTitle>Bulk Upload Members</DialogTitle>
               <DialogDescription>
-                Review and confirm the members to be imported. Ensure all required fields are present: staffId, firstName, lastName, email, gender.
+                Review and confirm the members to be imported. Ensure all required fields are present: staffId, firstName, lastName, email, companyId, gender.
               </DialogDescription>
             </DialogHeader>
 
@@ -1601,17 +1564,9 @@ export default function MembersPage() {
                     <TableHead>Staff ID</TableHead>
                     <TableHead>First Name</TableHead>
                     <TableHead>Last Name</TableHead>
-                     <TableHead>Date of Birth</TableHead>
-                      <TableHead>Gender</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Position</TableHead>
-                     <TableHead>Address</TableHead>
-                      <TableHead>Company</TableHead>
-                       <TableHead>Region</TableHead>
-                        <TableHead>Ghana Card</TableHead>
-                         <TableHead>Department</TableHead>
-                          <TableHead>Status</TableHead>
+                    <TableHead>Gender</TableHead>
+                    <TableHead>Company ID</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

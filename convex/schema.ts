@@ -112,4 +112,33 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_read", ["userId", "read"]),
+
+  savedSearches: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    searchTerm: v.optional(v.string()),
+    modules: v.array(v.union(
+      v.literal("companies"),
+      v.literal("members"),
+      v.literal("documents")
+    )),
+    filters: v.object({
+      companyRegion: v.optional(v.string()),
+      companyBranch: v.optional(v.string()),
+      memberStatus: v.optional(v.union(v.literal("active"), v.literal("dormant"))),
+      memberGender: v.optional(v.union(v.literal("male"), v.literal("female"))),
+      memberRegion: v.optional(v.string()),
+      memberDepartment: v.optional(v.string()),
+      memberPosition: v.optional(v.string()),
+      companyId: v.optional(v.id("companies")),
+      documentFileType: v.optional(v.string()),
+      dateFrom: v.optional(v.number()),
+      dateTo: v.optional(v.number()),
+    }),
+    createdAt: v.number(),
+    lastUsed: v.number(),
+    useCount: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_lastUsed", ["userId", "lastUsed"]),
 });
