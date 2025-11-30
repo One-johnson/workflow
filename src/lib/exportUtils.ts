@@ -31,7 +31,7 @@ export interface Member {
   dateJoined: number;
 }
 
-export function exportCompaniesToCSV(companies: Company[]) {
+export function exportCompaniesToCSV(companies: Company[], p0: string) {
   const headers = [ "Name", "Description","Branch", "Region", "Created Date"];
   const rows = companies.map((c) => [
     c.name,
@@ -51,7 +51,7 @@ export function exportCompaniesToCSV(companies: Company[]) {
   downloadFile(csvContent, "companies.csv", "text/csv");
 }
 
-export function exportCompaniesToPDF(companies: Company[]) {
+export function exportCompaniesToPDF(companies: Company[], p0: string) {
   const doc = new jsPDF();
 
   doc.setFontSize(18);
@@ -77,7 +77,7 @@ export function exportCompaniesToPDF(companies: Company[]) {
   doc.save("companies.pdf");
 }
 
-export function exportMembersToCSV(members: Member[]) {
+export function exportMembersToCSV(members: Member[], p0: string) {
   const headers = [
     "Staff ID",
     "First Name",
@@ -124,7 +124,7 @@ export function exportMembersToCSV(members: Member[]) {
   downloadFile(csvContent, "members.csv", "text/csv");
 }
 
-export function exportMembersToPDF(members: Member[]) {
+export function exportMembersToPDF(members: Member[], p0: string) {
   const doc = new jsPDF();
 
   doc.setFontSize(18);

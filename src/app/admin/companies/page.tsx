@@ -61,7 +61,7 @@ import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
-import { Company, exportCompaniesToCSV, exportCompaniesToPDF } from '@/lib/exportUtils';
+import { exportCompaniesToCSV, exportCompaniesToPDF } from '@/lib/exportUtils';
 import Papa from 'papaparse';
 import type { Id } from '../../../../convex/_generated/dataModel';
 
@@ -221,8 +221,6 @@ export default function CompaniesPage() {
 
     Papa.parse(file, {
       header: true,
-        skipEmptyLines: true,
-          transformHeader: (h) => h.trim().toLowerCase(),
       complete: (results) => {
         setBulkUploadData(results.data);
         setIsBulkUploadDialogOpen(true);
@@ -282,12 +280,10 @@ export default function CompaniesPage() {
       const bValue = b[sortField];
       
       if (sortField === 'createdAt') {
-        // Ensure values are properly converted to Date before comparing
-        const aDate = new Date(aValue);
-        const bDate = new Date(bValue);
-        return sortOrder === 'asc'
-          ? aDate.getTime() - bDate.getTime()
-          : bDate.getTime() - aDate.getTime();
+        // Ensure values are numeric (date or timestamp) before subtraction
+        const aTime = typeof aValue === 'string' ? new Date(aValue).getTime() : Number(aValue);
+        const bTime = typeof bValue === 'string' ? new Date(bValue).getTime() : Number(bValue);
+        return sortOrder === 'asc' ? aTime - bTime : bTime - aTime;
       }
       
       // For string fields
@@ -299,51 +295,6 @@ export default function CompaniesPage() {
   const selectedCompany = companies?.find((c) => c._id === selectedCompanyId);
   const allSelected = filteredCompanies && filteredCompanies.length > 0 && 
     filteredCompanies.every((c) => selectedIds.has(c._id));
-
-const ghanaRegions = [
-  "Ahafo",
-  "Ashanti",
-  "Bono",
-  "Bono East",
-  "Central",
-  "Eastern",
-  "Greater Accra",
-  "Northern",
-  "North East",
-  "Oti",
-  "Savannah",
-  "Upper East",
-  "Upper West",
-  "Volta",
-  "Western",
-  "Western North",
-]
-
-const regionBranches: Record<string, string[]> = {
-  "Greater Accra": [
-    "Madina",
-    "Accra Central",
-    "Tema",
-    "Teshie",
-    "Spintex",
-    "Kaneshie",
-  ],
-  "Ashanti": [
-    "Adum",
-    "Tanoso",
-    "Bantama",
-    "Asafo",
-    "Suame",
-  ],
-  "Central": [
-    "Cape Coast",
-    "Kasoa",
-    "Mankessim",
-  ],
-  // ⚠ Fill other regions when ready
-};
-
-const branchesForRegion = regionBranches[formData.region] || [];
 
   return (
     <AdminLayout>
@@ -368,17 +319,60 @@ const branchesForRegion = regionBranches[formData.region] || [];
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <Download className="h-4 w-4 mr-2" />
-                  Export
+                  {selectedIds.size > 0 ? `Export (${selectedIds.size})` : 'Export'}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => filteredCompanies && exportCompaniesToCSV(filteredCompanies as unknown as Company[])}>
+                {selectedIds.size > 0 ? (
+                  <>
+                    <DropdownMenuItem onClick={() => {
+                      const selectedCompanies = companies?.filter((c) => selectedIds.has(c._id)) || [];
+                      if (selectedCompanies.length === 0) {
+                        toast.error('No companies selected');
+                        return;
+                      }
+                      exportCompaniesToCSV(selectedCompanies, `companies-selected-${selectedCompanies.length}.csv`);
+                      toast.success(`Exported ${selectedCompanies.length} companies to CSV`);
+                    }}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export Selected as CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      const selectedCompanies = companies?.filter((c) => selectedIds.has(c._id)) || [];
+                      if (selectedCompanies.length === 0) {
+                        toast.error('No companies selected');
+                        return;
+                      }
+                      exportCompaniesToPDF(selectedCompanies, `companies-selected-${selectedCompanies.length}.pdf`);
+                      toast.success(`Exported ${selectedCompanies.length} companies to PDF`);
+                    }}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export Selected as PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
+                <DropdownMenuItem onClick={() => {
+                  if (!companies || companies.length === 0) {
+                    toast.error('No companies to export');
+                    return;
+                  }
+                  exportCompaniesToCSV(companies, 'companies-all.csv');
+                  toast.success(`Exported ${companies.length} companies to CSV`);
+                }}>
                   <FileText className="h-4 w-4 mr-2" />
-                  Export as CSV
+                  Export All as CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => filteredCompanies && exportCompaniesToPDF(filteredCompanies as unknown as Company[])}>
+                <DropdownMenuItem onClick={() => {
+                  if (!companies || companies.length === 0) {
+                    toast.error('No companies to export');
+                    return;
+                  }
+                  exportCompaniesToPDF(companies, 'companies-all.pdf');
+                  toast.success(`Exported ${companies.length} companies to PDF`);
+                }}>
                   <FileText className="h-4 w-4 mr-2" />
-                  Export as PDF
+                  Export All as PDF
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -818,47 +812,26 @@ const branchesForRegion = regionBranches[formData.region] || [];
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="region">Region</Label>
-                    <Select
-  value={formData.region}
-  onValueChange={(value) =>
-    setFormData({ ...formData, region: value, branch: "" })
-  }
->
-  <SelectTrigger className='w-full'>
-    <SelectValue placeholder="Select Region" />
-  </SelectTrigger>
-  <SelectContent>
-    {ghanaRegions.map((region) => (
-      <SelectItem key={region} value={region}>
-        {region}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-
+                    <Input
+                      id="region"
+                      placeholder="North America, EMEA, etc."
+                      value={formData.region}
+                      onChange={(e) =>
+                        setFormData({ ...formData, region: e.target.value })
+                      }
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="branch">Branch</Label>
-                    <Select
-  value={formData.branch}
-  onValueChange={(value) =>
-    setFormData({ ...formData, branch: value })
-  }
-  disabled={!formData.region} // disables until region is selected
->
-  <SelectTrigger className='w-full'>
-    <SelectValue placeholder="Select Branch" />
-  </SelectTrigger>
-  <SelectContent>
-    {branchesForRegion.map((branch) => (
-      <SelectItem key={branch} value={branch}>
-        {branch}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-
+                    <Input
+                      id="branch"
+                      placeholder="New York Office, London HQ, etc."
+                      value={formData.branch}
+                      onChange={(e) =>
+                        setFormData({ ...formData, branch: e.target.value })
+                      }
+                    />
                   </div>
                 </div>
               </div>
