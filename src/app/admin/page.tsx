@@ -7,21 +7,20 @@ import { api } from "../../../convex/_generated/api";
 import { useAuth } from "../../context/AuthContext";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import {
   Building2,
   Users,
   FileText,
   Power,
-  User,
   Plus,
   TrendingUp,
   Clock,
   UserCheck,
 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
-import { formatDistanceToNow } from "date-fns";
+
 import Link from "next/link";
 
 export default function AdminDashboard() {
@@ -54,11 +53,11 @@ export default function AdminDashboard() {
     members?.filter((m) => m.status === "active").length || 0;
   const dormantMembers =
     members?.filter((m) => m.status === "dormant").length || 0;
-  const recentCompanies = companies?.slice(0, 5) || [];
-  const recentMembers = members?.slice(0, 5) || [];
+  // const recentCompanies = companies?.slice(0, 5) || [];
+  // const recentMembers = members?.slice(0, 5) || [];
 
   // Calculate additional stats
-  const recentDocs = documents?.slice(0, 5) || [];
+  // const recentDocs = documents?.slice(0, 5) || [];
   const docsThisMonth =
     documents?.filter((d) => {
       const docDate = new Date(d.uploadedAt);
