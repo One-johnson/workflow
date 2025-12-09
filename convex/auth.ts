@@ -40,18 +40,9 @@ export const register = mutation({
     password: v.string(),
     firstName: v.string(),
     lastName: v.string(),
+    role: v.optional(v.union(v.literal("admin"), v.literal("member"))),
   },
   handler: async (ctx, args) => {
-    // Check if any admin already exists
-    const existingAdmin = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("role"), "admin"))
-      .first();
-
-    if (existingAdmin) {
-      throw new Error("Admin registration is closed. An admin already exists.");
-    }
-
     // Check if email already exists
     const existingUser = await ctx.db
       .query("users")
@@ -62,21 +53,21 @@ export const register = mutation({
       throw new Error("Email already registered");
     }
 
-    const passwordHash =  bcrypt.hashSync(args.password, 10);
+    const passwordHash = bcrypt.hashSync(args.password, 10);
 
     const userId = await ctx.db.insert("users", {
       email: args.email,
       passwordHash,
-      role: "admin",
+      role: args.role || "admin", // default to admin if not provided
       firstName: args.firstName,
       lastName: args.lastName,
-      createdAt: 0
+      createdAt: Date.now(),
     });
 
     return {
       userId,
       email: args.email,
-      role: "admin" as const,
+      role: args.role || "admin",
       firstName: args.firstName,
       lastName: args.lastName,
     };
@@ -90,7 +81,7 @@ export const checkAdminExists = query({
       .query("users")
       .filter((q) => q.eq(q.field("role"), "admin"))
       .first();
-    
+
     return !!admin;
   },
 });
